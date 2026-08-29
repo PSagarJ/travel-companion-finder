@@ -381,16 +381,38 @@ Notes: This is your curated solo adventure. Have a great trip!
 
           <div style={{ textAlign: "center", marginTop: "1rem" }}>
             {applyStatus ? (
-              <div
-                style={{
-                  padding: "1rem",
-                  background: "#dcfce7",
-                  color: "#166534",
-                  borderRadius: "8px",
-                  fontWeight: "bold",
-                }}
-              >
-                {applyStatus}
+              <div>
+                <div
+                  style={{
+                    padding: "1rem",
+                    background: "#dcfce7",
+                    color: "#166534",
+                    borderRadius: "8px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {applyStatus}
+                </div>
+                {(trip.creatorId === currentUserId ||
+                  trip.approvedMembers?.some(
+                    (m) => m.userId === currentUserId,
+                  )) && (
+                  <Link
+                    to={`/chat/${trip._id}`}
+                    style={{
+                      display: "inline-block",
+                      marginTop: "0.75rem",
+                      padding: "0.75rem 1.5rem",
+                      background: "#0284c7",
+                      color: "white",
+                      borderRadius: "8px",
+                      fontWeight: "bold",
+                      textDecoration: "none",
+                    }}
+                  >
+                    💬 Open Trip Chat
+                  </Link>
+                )}
               </div>
             ) : (
               <button
