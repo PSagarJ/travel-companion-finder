@@ -146,11 +146,43 @@ const Feed = () => {
         )}
 
         <input
+          id="photo-upload-input"
           type="file"
           accept="image/*"
           onChange={handleFileChange}
-          style={{ marginBottom: "0.75rem" }}
+          style={{
+            position: "absolute",
+            width: "1px",
+            height: "1px",
+            padding: 0,
+            margin: "-1px",
+            overflow: "hidden",
+            clip: "rect(0,0,0,0)",
+            border: 0,
+          }}
         />
+        <label
+          htmlFor="photo-upload-input"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "0.5rem",
+            width: "100%",
+            padding: "0.85rem",
+            marginBottom: "0.75rem",
+            background: imageFile ? "#e0f2fe" : "white",
+            color: imageFile ? "#0369a1" : "#334155",
+            border: "2px dashed #94a3b8",
+            borderRadius: "8px",
+            fontWeight: "600",
+            cursor: "pointer",
+            boxSizing: "border-box",
+            textAlign: "center",
+          }}
+        >
+          📷 {imageFile ? imageFile.name : "Choose a photo to upload"}
+        </label>
 
         <input
           type="text"
