@@ -22,7 +22,7 @@ const app = express();
 // Add CLIENT_URL as an env var on Render if you ever change/add a frontend domain.
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://travel-buddy-finder-frontend.onrender.com",
+  "https://travel-companion-finder-frontend.onrender.com",
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
