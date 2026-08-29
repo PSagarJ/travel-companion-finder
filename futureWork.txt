@@ -1,0 +1,1 @@
+Let's install our security guards: Bcrypt (to scramble the password) and JWT (to give the user a digital VIP wristband so they stay logged in).
