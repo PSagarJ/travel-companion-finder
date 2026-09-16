@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import io from "socket.io-client";
 import api from "../api/axiosInstance";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const BudgetSplitter = () => {
   const { id } = useParams();
@@ -43,6 +46,31 @@ const BudgetSplitter = () => {
     };
     loadLedgerData();
   }, [id, currentUserId]);
+
+  // Live-sync expenses across devices/sessions viewing the same trip —
+  // reuses the same authenticated, membership-checked room the chat feature uses.
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const socket = io.connect(BASE_URL, { auth: { token } });
+    socket.emit("join_trip_room", id);
+
+    socket.on("expense_added", (newExpense) => {
+      setExpenses((prevExpenses) => {
+        // Avoid a duplicate for whichever device actually submitted this
+        // expense — it already added it to its own state optimistically.
+        if (prevExpenses.some((exp) => exp._id === newExpense._id)) {
+          return prevExpenses;
+        }
+        return [newExpense, ...prevExpenses];
+      });
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [id]);
 
   // ... rest of your handleAddExpense function and return statement stay exactly the same!
 
@@ -197,7 +225,7 @@ const BudgetSplitter = () => {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
           gap: "1.5rem",
           marginBottom: "2.5rem",
         }}
@@ -260,7 +288,15 @@ const BudgetSplitter = () => {
         </div>
       </div>
 
+      <style>{`
+        @media (max-width: 768px) {
+          .budget-main-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
       <div
+        className="budget-main-grid"
         style={{
           display: "grid",
           gridTemplateColumns: "1.2fr 1fr",

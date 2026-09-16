@@ -18,6 +18,14 @@ export const addExpense = async (req, res) => {
     });
 
     const savedExpense = await newExpense.save();
+
+    // Push this to anyone else currently viewing this trip's expense page —
+    // otherwise other devices/sessions only see it after their next manual reload.
+    const io = req.app.get('io');
+    if (io) {
+      io.to(tripId).emit('expense_added', savedExpense);
+    }
+
     res.status(201).json(savedExpense);
   } catch (error) {
     console.error("Error adding expense:", error);

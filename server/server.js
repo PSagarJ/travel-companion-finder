@@ -53,6 +53,10 @@ const io = new Server(server, {
   }
 });
 
+// Lets controllers (e.g. expenseController) broadcast real-time updates
+// to everyone currently viewing a trip, via req.app.get('io').
+app.set('io', io);
+
 // --- 3. API ROUTES ---
 app.use('/api/auth', authRoutes); 
 app.use('/api/users', userRoutes);

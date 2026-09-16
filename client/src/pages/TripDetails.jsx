@@ -8,6 +8,7 @@ const TripDetails = () => {
 
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [applyStatus, setApplyStatus] = useState("");
   const [tripPosts, setTripPosts] = useState([]);
 
@@ -21,12 +22,19 @@ const TripDetails = () => {
   const currentUserId = currentUser ? currentUser.id : null;
 
   useEffect(() => {
+    // Prevents a stale request for a previously-viewed trip from overwriting
+    // the current one if it resolves out of order.
+    let ignore = false;
+
     const fetchTrip = async () => {
       try {
         // Dynamic fetch request based on environment 🚀
         const response = await api.get(`/api/trips/${id}`);
+        if (ignore) return;
+
         const tripData = response.data;
         setTrip(tripData);
+        setLoadError(false);
 
         // Check user relationship to this trip immediately on page load
         if (currentUserId) {
@@ -69,40 +77,40 @@ const TripDetails = () => {
 
         setLoading(false);
       } catch (error) {
-        console.error("Backend not ready yet:", error.message);
-        setTrip({
-          _id: id,
-          title: "Expedition to the Highlands",
-          destination:
-            id === "dest-1"
-              ? "Bali, Indonesia"
-              : id === "dest-2"
-                ? "Kyoto, Japan"
-                : "Swiss Alps",
-          startDate: "2026-09-10",
-          endDate: "2026-09-24",
-          estimatedBudget: 1200,
-          travelStyle: "Adventure",
-          targetVibe: "Nature & Hiking",
-          creatorId: "fallback-id",
-          applicants: [],
-        });
+        if (ignore) return;
+        console.error("Error loading trip:", error.message);
+        // Show a real error state instead of fabricated placeholder trip data —
+        // showing made-up content when the fetch fails is misleading, not helpful.
+        setLoadError(true);
         setLoading(false);
       }
     };
     fetchTrip();
+
+    return () => {
+      ignore = true;
+    };
   }, [id, currentUserId]);
 
   useEffect(() => {
+    // Prevents a slow, stale request for a previously-viewed trip from
+    // overwriting the current trip's photos if it resolves out of order —
+    // e.g. quickly clicking from Trip A to Trip B.
+    let ignore = false;
+
     const fetchTripPosts = async () => {
       try {
         const response = await api.get(`/api/posts/trip/${id}`);
-        setTripPosts(response.data);
+        if (!ignore) setTripPosts(response.data);
       } catch (error) {
-        console.error("Error loading trip photos:", error.message);
+        if (!ignore) console.error("Error loading trip photos:", error.message);
       }
     };
     fetchTripPosts();
+
+    return () => {
+      ignore = true;
+    };
   }, [id]);
 
   // Dynamic button handler based on mode
@@ -166,6 +174,32 @@ Notes: This is your curated solo adventure. Have a great trip!
         Loading adventure...
       </h2>
     );
+
+  if (loadError || !trip) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "4rem" }}>
+        <h2 style={{ color: "#0f172a" }}>
+          Something went wrong loading this trip.
+        </h2>
+        <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
+          It may have been removed, or there was a connection problem.
+        </p>
+        <Link
+          to="/"
+          style={{
+            background: "#0284c7",
+            color: "white",
+            textDecoration: "none",
+            padding: "0.65rem 1.5rem",
+            borderRadius: "8px",
+            fontWeight: "bold",
+          }}
+        >
+          Back to Home
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
@@ -255,7 +289,7 @@ Notes: This is your curated solo adventure. Have a great trip!
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: "1.5rem",
               marginBottom: "2rem",
             }}

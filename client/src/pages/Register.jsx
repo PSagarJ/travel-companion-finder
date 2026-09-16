@@ -50,14 +50,31 @@ const Register = () => {
 
   return (
     <div
+      className="register-layout"
       style={{
         display: "flex",
         minHeight: "calc(100vh - 70px)",
         background: "#fff",
       }}
     >
+      <style>{`
+        @media (max-width: 768px) {
+          .register-layout {
+            flex-direction: column;
+          }
+          .register-visual-side {
+            flex: none !important;
+            height: 180px !important;
+          }
+          .register-form-side {
+            padding: 2rem 1.5rem !important;
+          }
+        }
+      `}</style>
+
       {/* LEFT SIDE: Visual Travel Inspiration */}
       <div
+        className="register-visual-side"
         style={{
           flex: 1,
           display: "block",
@@ -104,6 +121,7 @@ const Register = () => {
 
       {/* RIGHT SIDE: The Form */}
       <div
+        className="register-form-side"
         style={{
           flex: 1,
           display: "flex",
