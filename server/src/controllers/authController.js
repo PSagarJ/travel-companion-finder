@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 // 1. REGISTER A NEW USER
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, travelStyle } = req.body;
 
     if (!process.env.JWT_SECRET) {
       console.error('JWT_SECRET is not set in environment variables');
@@ -18,6 +18,11 @@ export const register = async (req, res) => {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
+    // Guard against anything outside the schema's allowed values reaching Mongoose
+    // as a raw, unhelpful validation error — fall back to the schema's own default.
+    const allowedTravelStyles = ['Backpacker', 'Luxury', 'Budget', 'Adventure', 'Chill'];
+    const safeTravelStyle = allowedTravelStyles.includes(travelStyle) ? travelStyle : 'Chill';
+
     // Hash the password so it's safely encrypted
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -26,7 +31,8 @@ export const register = async (req, res) => {
     const newUser = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      travelStyle: safeTravelStyle
     });
     await newUser.save();
 
@@ -35,7 +41,7 @@ export const register = async (req, res) => {
 
     res.status(201).json({
       token,
-      user: { id: newUser._id, name: newUser.name, email: newUser.email }
+      user: { id: newUser._id, name: newUser.name, email: newUser.email, travelStyle: newUser.travelStyle }
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -70,7 +76,7 @@ export const login = async (req, res) => {
 
     res.status(200).json({
       token,
-      user: { id: user._id, name: user.name, email: user.email }
+      user: { id: user._id, name: user.name, email: user.email, travelStyle: user.travelStyle }
     });
   } catch (error) {
     console.error("Login error:", error);

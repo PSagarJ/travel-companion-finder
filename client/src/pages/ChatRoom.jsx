@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { useParams, Link } from "react-router-dom";
 import io from "socket.io-client";
 
 // 🌐 Establish dynamic URL for production Render deployment vs local fallback
@@ -7,24 +7,25 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const ChatRoom = () => {
   const { tripId } = useParams();
-  const navigate = useNavigate();
 
   // State for messages and the current input
   const [currentMessage, setCurrentMessage] = useState("");
   const [messageList, setMessageList] = useState([]);
   const [chatError, setChatError] = useState("");
-  const [socket, setSocket] = useState(null);
+  // The socket instance doesn't affect what's rendered, so it belongs in a
+  // ref, not state — assigning a ref is a plain mutation, not a setState
+  // call, so it can't trigger the "setState in effect" warning.
+  const socketRef = useRef(null);
 
   const loggedInUser = localStorage.getItem("user");
   const currentUser = loggedInUser ? JSON.parse(loggedInUser) : null;
+  // Known synchronously at render time — no need to push this through
+  // an effect + setState just to check whether it exists.
+  const token = localStorage.getItem("token");
 
   // 1. Establish an authenticated connection and join the trip room
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      setChatError("You must be logged in to use chat.");
-      return;
-    }
+    if (!token) return;
 
     const newSocket = io.connect(BASE_URL, {
       auth: { token },
@@ -44,16 +45,17 @@ const ChatRoom = () => {
       setChatError("Could not connect to chat. Try logging in again.");
     });
 
-    setSocket(newSocket);
+    socketRef.current = newSocket;
 
     return () => {
       newSocket.disconnect();
+      socketRef.current = null;
     };
-  }, [tripId]);
+  }, [tripId, token]);
 
   // 2. Handle sending a message
   const sendMessage = () => {
-    if (currentMessage !== "" && socket) {
+    if (currentMessage !== "" && socketRef.current) {
       const messageData = {
         tripId: tripId,
         text: currentMessage,
@@ -61,7 +63,7 @@ const ChatRoom = () => {
 
       // Blast it to the backend pipe — server fills in sender/time from
       // the verified socket identity, we don't send that ourselves
-      socket.emit("send_message", messageData);
+      socketRef.current.emit("send_message", messageData);
 
       // Add it to our own screen instantly, using our own known identity
       setMessageList((list) => [
@@ -136,7 +138,7 @@ const ChatRoom = () => {
         </span>
       </div>
 
-      {chatError && (
+      {(!token || chatError) && (
         <div
           style={{
             background: "#fee2e2",
@@ -147,7 +149,7 @@ const ChatRoom = () => {
             textAlign: "center",
           }}
         >
-          {chatError}
+          {!token ? "You must be logged in to use chat." : chatError}
         </div>
       )}
 
