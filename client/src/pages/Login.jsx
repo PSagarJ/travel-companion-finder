@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import api from "../api/axiosInstance";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -33,157 +42,77 @@ const Login = () => {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "400px",
-        margin: "4rem auto",
-        padding: "2rem",
-        background: "white",
-        borderRadius: "12px",
-        boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
-        border: "1px solid #e5e7eb",
-      }}
-    >
-      <h2
-        style={{
-          textAlign: "center",
-          color: "#0f172a",
-          marginBottom: "0.5rem",
-        }}
-      >
-        Welcome Back
-      </h2>
-      <p
-        style={{
-          textAlign: "center",
-          color: "#64748b",
-          marginBottom: "2rem",
-          fontSize: "0.9rem",
-        }}
-      >
-        Log in to access your planned routes and coordinates.
-      </p>
+    <div className="flex min-h-[calc(100vh-70px)] items-center justify-center bg-background px-4 py-12">
+      <Card className="w-full max-w-sm">
+        <CardHeader>
+          <CardTitle className="font-display text-3xl font-semibold">
+            Welcome back
+          </CardTitle>
+          <CardDescription>
+            Log in to find your next travel crew.
+          </CardDescription>
+        </CardHeader>
 
-      {error && (
-        <div
-          style={{
-            color: "#ef4444",
-            background: "#fef2f2",
-            padding: "0.75rem",
-            borderRadius: "6px",
-            marginBottom: "1rem",
-            fontWeight: "bold",
-            fontSize: "0.9rem",
-            border: "1px solid #fee2e2",
-          }}
-        >
-          {error}
-        </div>
-      )}
+        <CardContent>
+          {error && (
+            <div className="mb-5 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+              {error}
+            </div>
+          )}
 
-      <form
-        onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
-      >
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "0.4rem",
-              fontWeight: "600",
-              color: "#334155",
-              fontSize: "0.9rem",
-            }}
-          >
-            Email Address
-          </label>
-          <input
-            type="email"
-            name="email"
-            required
-            value={formData.email}
-            onChange={handleChange}
-            style={{
-              width: "100%",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5e1",
-              outline: "none",
-            }}
-            placeholder="you@example.com"
-          />
-        </div>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="email"
+                className="text-sm font-medium text-foreground"
+              >
+                Email
+              </label>
+              <Input
+                id="email"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                required
+              />
+            </div>
 
-        <div>
-          <label
-            style={{
-              display: "block",
-              marginBottom: "0.4rem",
-              fontWeight: "600",
-              color: "#334155",
-              fontSize: "0.9rem",
-            }}
-          >
-            Password
-          </label>
-          <input
-            type="password"
-            name="password"
-            required
-            value={formData.password}
-            onChange={handleChange}
-            style={{
-              width: "100%",
-              padding: "0.75rem 1rem",
-              borderRadius: "8px",
-              border: "1px solid #cbd5e1",
-              outline: "none",
-            }}
-            placeholder="••••••••"
-          />
-        </div>
+            <div className="flex flex-col gap-1.5">
+              <label
+                htmlFor="password"
+                className="text-sm font-medium text-foreground"
+              >
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+              />
+            </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "0.75rem",
-            background: "#0284c7",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            fontSize: "1rem",
-            fontWeight: "bold",
-            cursor: "pointer",
-            transition: "background 0.2s",
-            marginTop: "0.5rem",
-          }}
-        >
-          {loading ? "Verifying..." : "Log In"}
-        </button>
-      </form>
+            <Button type="submit" disabled={loading} className="mt-2 w-full">
+              {loading ? "Logging in..." : "Log in"}
+            </Button>
+          </form>
 
-      <p
-        style={{
-          textAlign: "center",
-          marginTop: "1.5rem",
-          fontSize: "0.9rem",
-          color: "#64748b",
-        }}
-      >
-        Don't have an account?{" "}
-        <Link
-          to="/register"
-          style={{
-            color: "#0284c7",
-            textDecoration: "none",
-            fontWeight: "bold",
-          }}
-        >
-          Sign Up
-        </Link>
-      </p>
+          <p className="mt-6 text-center text-sm text-muted-foreground">
+            New here?{" "}
+            <Link
+              to="/register"
+              className="font-semibold text-primary hover:underline"
+            >
+              Create an account
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 };
