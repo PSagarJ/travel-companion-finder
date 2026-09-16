@@ -7,7 +7,11 @@ const Feed = () => {
   const linkedTripId = searchParams.get("tripId") || "";
 
   const [posts, setPosts] = useState([]);
+  const loggedInUser = localStorage.getItem("user");
+  const currentUser = loggedInUser ? JSON.parse(loggedInUser) : null;
+
   const [loading, setLoading] = useState(true);
+  const [authRequired, setAuthRequired] = useState(false);
   const [caption, setCaption] = useState("");
   const [destination, setDestination] = useState(
     searchParams.get("destination") || "",
@@ -18,21 +22,47 @@ const Feed = () => {
   const [uploading, setUploading] = useState(false);
   const [selectedPost, setSelectedPost] = useState(null);
 
-  const loggedInUser = localStorage.getItem("user");
-  const currentUser = loggedInUser ? JSON.parse(loggedInUser) : null;
-
   useEffect(() => {
+    // Guards against setting state after this effect has been cleaned up
+    // (e.g. the component unmounted before the request resolved).
+    let ignore = false;
+
     const fetchPosts = async () => {
+      // Read localStorage fresh here instead of closing over the outer
+      // `currentUser`/`loggedInUser` variables — this is what lets the
+      // effect safely run once on mount with an empty dependency array.
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        if (!ignore) {
+          setAuthRequired(true);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
         const response = await api.get("/api/posts");
-        setPosts(response.data);
+        if (!ignore) setPosts(response.data);
       } catch (error) {
-        console.error("Error loading feed:", error.message);
+        if (!ignore) {
+          // A stored token can still be expired/invalid — treat a 401 the same way
+          if (error.response?.status === 401) {
+            setAuthRequired(true);
+          } else {
+            console.error("Error loading feed:", error.message);
+          }
+        }
       } finally {
-        setLoading(false);
+        if (!ignore) setLoading(false);
       }
     };
+
     fetchPosts();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   const handleFileChange = (e) => {
@@ -86,11 +116,79 @@ const Feed = () => {
       setPreview(null);
       setStatus("Posted!");
     } catch (error) {
-      setStatus(error.response?.data?.message || "Failed to upload photo.");
+      if (error.response?.status === 401) {
+        setAuthRequired(true);
+      } else {
+        setStatus(error.response?.data?.message || "Failed to upload photo.");
+      }
     } finally {
       setUploading(false);
     }
   };
+
+  // Logged-out (or expired-session) view: friendly prompt instead of a
+  // silently empty feed.
+  if (!loading && authRequired) {
+    return (
+      <div
+        style={{
+          maxWidth: "500px",
+          margin: "4rem auto",
+          padding: "0 1rem",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔒</div>
+        <h1
+          style={{
+            fontSize: "1.5rem",
+            color: "#0f172a",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Log in to see travel memories
+        </h1>
+        <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
+          The photo feed is only visible to logged-in members. Log in or create
+          an account to view and share travel photos.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            gap: "0.75rem",
+            justifyContent: "center",
+          }}
+        >
+          <Link
+            to="/login"
+            style={{
+              background: "#0284c7",
+              color: "white",
+              textDecoration: "none",
+              padding: "0.65rem 1.5rem",
+              borderRadius: "8px",
+              fontWeight: "bold",
+            }}
+          >
+            Log in
+          </Link>
+          <Link
+            to="/register"
+            style={{
+              background: "#f1f5f9",
+              color: "#0f172a",
+              textDecoration: "none",
+              padding: "0.65rem 1.5rem",
+              borderRadius: "8px",
+              fontWeight: "bold",
+            }}
+          >
+            Sign up
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: "935px", margin: "2rem auto", padding: "0 1rem" }}>
