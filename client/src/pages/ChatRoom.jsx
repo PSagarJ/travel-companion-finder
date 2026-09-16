@@ -1,56 +1,81 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import io from "socket.io-client";
 
 // 🌐 Establish dynamic URL for production Render deployment vs local fallback
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-// 1. Establish the connection to your backend Socket.io server dynamically
-const socket = io.connect(BASE_URL);
-
 const ChatRoom = () => {
   const { tripId } = useParams();
+  const navigate = useNavigate();
 
   // State for messages and the current input
   const [currentMessage, setCurrentMessage] = useState("");
   const [messageList, setMessageList] = useState([]);
+  const [chatError, setChatError] = useState("");
+  const [socket, setSocket] = useState(null);
 
-  // Hardcoded current user details
-  const currentUserName = "Pratap Sagar";
+  const loggedInUser = localStorage.getItem("user");
+  const currentUser = loggedInUser ? JSON.parse(loggedInUser) : null;
 
-  // 2. Join the specific Trip Room when the component loads
+  // 1. Establish an authenticated connection and join the trip room
   useEffect(() => {
-    socket.emit("join_trip_room", tripId);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setChatError("You must be logged in to use chat.");
+      return;
+    }
 
-    // Set up the listener for incoming messages from the server
-    socket.on("receive_message", (data) => {
+    const newSocket = io.connect(BASE_URL, {
+      auth: { token },
+    });
+
+    newSocket.emit("join_trip_room", tripId);
+
+    newSocket.on("receive_message", (data) => {
       setMessageList((list) => [...list, data]);
     });
 
-    // Cleanup function when you leave the page
+    newSocket.on("chat_error", (message) => {
+      setChatError(message);
+    });
+
+    newSocket.on("connect_error", () => {
+      setChatError("Could not connect to chat. Try logging in again.");
+    });
+
+    setSocket(newSocket);
+
     return () => {
-      socket.off("receive_message");
+      newSocket.disconnect();
     };
   }, [tripId]);
 
-  // 3. Handle sending a message
-  const sendMessage = async () => {
-    if (currentMessage !== "") {
+  // 2. Handle sending a message
+  const sendMessage = () => {
+    if (currentMessage !== "" && socket) {
       const messageData = {
         tripId: tripId,
-        sender: currentUserName,
         text: currentMessage,
-        time: new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
       };
 
-      // Blast it to the backend pipe
-      await socket.emit("send_message", messageData);
+      // Blast it to the backend pipe — server fills in sender/time from
+      // the verified socket identity, we don't send that ourselves
+      socket.emit("send_message", messageData);
 
-      // Add it to our own screen instantly
-      setMessageList((list) => [...list, messageData]);
+      // Add it to our own screen instantly, using our own known identity
+      setMessageList((list) => [
+        ...list,
+        {
+          ...messageData,
+          sender: currentUser?.name || "You",
+          senderId: currentUser?.id,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
       setCurrentMessage(""); // Clear the input box
     }
   };
@@ -111,6 +136,21 @@ const ChatRoom = () => {
         </span>
       </div>
 
+      {chatError && (
+        <div
+          style={{
+            background: "#fee2e2",
+            color: "#991b1b",
+            padding: "0.75rem 1rem",
+            fontSize: "0.9rem",
+            fontWeight: "600",
+            textAlign: "center",
+          }}
+        >
+          {chatError}
+        </div>
+      )}
+
       {/* Chat Window */}
       <div
         style={{
@@ -140,7 +180,7 @@ const ChatRoom = () => {
         </div>
 
         {messageList.map((msg, index) => {
-          const isMe = msg.sender === currentUserName;
+          const isMe = msg.senderId === currentUser?.id;
           return (
             <div
               key={index}
