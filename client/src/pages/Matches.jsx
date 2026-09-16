@@ -1,72 +1,43 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import axios from "axios";
+import api from "../api/axiosInstance";
 
 const Matches = () => {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [authRequired, setAuthRequired] = useState(false);
 
-  // 🌐 Define the dynamic base URL for production Render vs local fallback
-  const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
+  const fetchMatches = async () => {
+    setLoading(true);
+    setError(null);
 
-  // Hardcoded current user ID until login is built
-  const currentUserId = "6a13106183dffcf4cf5e0bf4";
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setAuthRequired(true);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // No userId needed — the server identifies you from your token
+      const response = await api.get("/api/matches");
+      setMatches(response.data);
+    } catch (err) {
+      if (err.response?.status === 401) {
+        setAuthRequired(true);
+      } else {
+        console.error("Matches fetch failed:", err.message);
+        setError("Unable to load matches right now.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchMatches = async () => {
-      try {
-        // Dynamic fetch routing based on your deployment environment 🚀
-        const response = await axios.get(
-          `${BASE_URL}/api/matches/${currentUserId}`,
-        );
-
-        if (response.data.length === 0) {
-          throw new Error("No matches found in DB, using fallback");
-        }
-
-        setMatches(response.data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Matches fetch failed:", error.message);
-
-        // SMART FALLBACK
-        setMatches([
-          {
-            user: {
-              _id: "user-amit",
-              name: "Amit Patil",
-              travelStyle: "Adventure",
-              vibeBadges: ["⛰️ Mountain Goat", "📸 Photographer"],
-            },
-            matchScore: 98,
-            sharedDestinations: ["Manali, India", "Swiss Alps"],
-          },
-          {
-            user: {
-              _id: "user-sneha",
-              name: "Sneha Kulkarni",
-              travelStyle: "Backpacker",
-              vibeBadges: ["🍕 Foodie", "🎒 Light Packer"],
-            },
-            matchScore: 94,
-            sharedDestinations: ["Kyoto, Japan"],
-          },
-          {
-            user: {
-              _id: "user-rahul",
-              name: "Rahul Desai",
-              travelStyle: "Luxury",
-              vibeBadges: ["🍷 Wine Connoisseur", "🏖️ Beach Bum"],
-            },
-            matchScore: 78,
-            sharedDestinations: ["Ubud, Bali"],
-          },
-        ]);
-        setLoading(false);
-      }
-    };
     fetchMatches();
-  }, [currentUserId, BASE_URL]); // Added BASE_URL safely to the dependencies
+  }, []);
 
   if (loading)
     return (
@@ -74,6 +45,64 @@ const Matches = () => {
         Finding your travel buddies...
       </h2>
     );
+
+  if (authRequired) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "4rem" }}>
+        <h2 style={{ color: "#0f172a" }}>Log in to see your matches</h2>
+        <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
+          You need to be logged in to find travel buddies.
+        </p>
+        <Link
+          to="/login"
+          style={{
+            background: "#0284c7",
+            color: "white",
+            textDecoration: "none",
+            padding: "0.65rem 1.5rem",
+            borderRadius: "8px",
+            fontWeight: "bold",
+          }}
+        >
+          Log in
+        </Link>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "4rem" }}>
+        <h2 style={{ color: "#0f172a" }}>{error}</h2>
+        <button
+          onClick={fetchMatches}
+          style={{
+            marginTop: "1rem",
+            background: "#f1f5f9",
+            border: "none",
+            padding: "0.65rem 1.5rem",
+            borderRadius: "8px",
+            fontWeight: "bold",
+            cursor: "pointer",
+          }}
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div style={{ textAlign: "center", marginTop: "4rem" }}>
+        <h2 style={{ color: "#0f172a" }}>No matches found yet</h2>
+        <p style={{ color: "#64748b" }}>
+          Check back once more travelers join, or update your travel style in
+          your profile.
+        </p>
+      </div>
+    );
+  }
 
   // Array of beautiful default cover photos for travelers
   const coverPhotos = [

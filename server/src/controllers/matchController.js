@@ -21,7 +21,10 @@ const vectorizeUser = (user) => {
 
 export const getTopMatches = async (req, res) => {
   try {
-    const { userId } = req.params;
+    // The requesting user's identity comes from their verified token, not
+    // a URL param — otherwise anyone could fetch anyone else's matches by
+    // just changing the ID in the request.
+    const userId = req.user.id;
 
     // 1. Find the current user asking for matches
     const currentUser = await User.findById(userId);
