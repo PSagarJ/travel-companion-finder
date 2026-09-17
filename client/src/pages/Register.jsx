@@ -3,6 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  ArrowRight,
+  ArrowLeft,
+  Compass,
+  UserRound,
+  Mail,
+  Lock,
+} from "lucide-react";
 
 const TRAVEL_STYLES = [
   { value: "Adventure", label: "🏕️ Adventure & Hiking" },
@@ -13,32 +21,24 @@ const TRAVEL_STYLES = [
 
 const Register = () => {
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     password: "",
     travelStyle: "Adventure",
   });
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const response = await api.post("/api/auth/register", formData);
-
-      localStorage.setItem("token", response.data.token);
-      localStorage.setItem("user", JSON.stringify(response.data.user));
-
+      const r = await api.post("/api/auth/register", formData);
+      localStorage.setItem("token", r.data.token);
+      localStorage.setItem("user", JSON.stringify(r.data.user));
       navigate("/dashboard");
     } catch (err) {
       setError(
@@ -49,145 +49,146 @@ const Register = () => {
       setLoading(false);
     }
   };
-
   return (
-    <div className="flex min-h-[calc(100vh-70px)] flex-col bg-background md:flex-row">
-      {/* Visual side — travel inspiration. Compact banner on mobile, full-height on desktop. */}
-      <div
-        className="relative h-44 shrink-0 bg-cover bg-center md:h-auto md:flex-1"
-        style={{
-          backgroundImage:
-            'url("https://images.unsplash.com/photo-1488085061387-422e29b40080?q=80&w=2000")',
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        <div className="absolute inset-x-6 bottom-6 text-white md:inset-x-[10%] md:bottom-[10%]">
-          <h2 className="font-display text-2xl font-semibold leading-tight text-balance md:text-4xl">
-            Your next great story starts here.
-          </h2>
-          <p className="mt-2 hidden text-white/80 md:block">
-            Join a community of travelers, find your crew, and explore the world
-            together.
-          </p>
+    <main className="min-h-screen bg-[#07090d] px-4 pb-10 pt-28 text-white">
+      <div className="mx-auto grid min-h-[calc(100vh-9rem)] max-w-6xl overflow-hidden rounded-[2rem] border border-white/10 bg-[#0d1117] shadow-2xl lg:grid-cols-2">
+        <div className="relative hidden overflow-hidden lg:block lg:order-2">
+          <img
+            className="absolute inset-0 h-full w-full object-cover"
+            src="https://images.unsplash.com/photo-1503220317375-aaad61436b1b?q=85&w=1800&auto=format&fit=crop"
+            alt="Traveler overlooking a landscape"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/15 to-transparent" />
+          <div className="absolute bottom-10 left-10 right-10">
+            <p className="text-xs font-bold uppercase tracking-[.2em] text-[#ffb09a]">
+              Start somewhere
+            </p>
+            <h2 className="mt-3 font-display text-5xl font-extrabold leading-[.95]">
+              Your next great
+              <br />
+              story starts
+              <br />
+              <span className="text-[#ff9a78]">with a crew.</span>
+            </h2>
+          </div>
         </div>
-      </div>
-
-      {/* Form side */}
-      <div className="flex flex-1 items-center justify-center px-6 py-10 md:px-[10%]">
-        <div className="w-full max-w-sm">
-          <h1 className="font-display text-3xl font-semibold text-foreground">
-            Create your passport
-          </h1>
-          <p className="mt-1 text-muted-foreground">
-            Sign up to post trips and match with buddies.
-          </p>
-
-          {error && (
-            <div className="mt-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="name"
-                className="text-sm font-medium text-foreground"
-              >
-                Full name
-              </label>
-              <Input
-                id="name"
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Where should we send your ticket?"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="email"
-                className="text-sm font-medium text-foreground"
-              >
-                Email address
-              </label>
-              <Input
-                id="email"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="password"
-                className="text-sm font-medium text-foreground"
-              >
-                Password
-              </label>
-              <Input
-                id="password"
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="travelStyle"
-                className="text-sm font-medium text-foreground"
-              >
-                Primary travel style
-              </label>
-              <select
-                id="travelStyle"
-                name="travelStyle"
-                value={formData.travelStyle}
-                onChange={handleChange}
-                className="h-11 w-full cursor-pointer rounded-full border border-input bg-background px-5 text-sm shadow-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-              >
-                {TRAVEL_STYLES.map((style) => (
-                  <option key={style.value} value={style.value}>
-                    {style.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Button
-              type="submit"
-              variant="accent"
-              disabled={loading}
-              className="mt-2 w-full"
-            >
-              {loading ? "Creating passport..." : "Start my journey"}
-            </Button>
-          </form>
-
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+        <div className="flex items-center justify-center p-7 sm:p-12 lg:order-1">
+          <div className="w-full max-w-md">
             <Link
-              to="/login"
-              className="font-semibold text-primary hover:underline"
+              to="/"
+              className="mb-10 inline-flex items-center gap-2 text-sm font-semibold text-white/45 hover:text-white"
             >
-              Log in
+              <ArrowLeft className="size-4" /> Back home
             </Link>
-          </p>
+            <div className="mb-7">
+              <div className="mb-5 flex size-11 items-center justify-center rounded-2xl bg-[#ff704d]/10 text-[#ff9a78]">
+                <Compass className="size-5" />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff9a78]">
+                Create your passport
+              </p>
+              <h1 className="mt-3 font-display text-4xl font-extrabold tracking-tight">
+                Let's find your people.
+              </h1>
+              <p className="mt-3 text-white/45">
+                Tell us a little about how you like to travel.
+              </p>
+            </div>
+            {error && (
+              <div className="mb-5 rounded-2xl border border-[#ff5f6d]/20 bg-[#ff5f6d]/10 px-4 py-3 text-sm text-[#ff9ba5]">
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/50">
+                  Full name
+                </label>
+                <div className="relative">
+                  <UserRound className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-white/25" />
+                  <Input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Your name"
+                    required
+                    className="h-13 rounded-2xl border-white/10 bg-white/[.04] pl-11 text-white placeholder:text-white/25"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/50">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-white/25" />
+                  <Input
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="you@example.com"
+                    required
+                    className="h-13 rounded-2xl border-white/10 bg-white/[.04] pl-11 text-white placeholder:text-white/25"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/50">
+                  Password
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-white/25" />
+                  <Input
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="••••••••"
+                    required
+                    className="h-13 rounded-2xl border-white/10 bg-white/[.04] pl-11 text-white placeholder:text-white/25"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-white/50">
+                  Travel style
+                </label>
+                <select
+                  name="travelStyle"
+                  value={formData.travelStyle}
+                  onChange={handleChange}
+                  className="h-13 w-full rounded-2xl border border-white/10 bg-[#11161e] px-4 text-sm text-white outline-none focus:border-[#ff704d]"
+                >
+                  {TRAVEL_STYLES.map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button
+                disabled={loading}
+                variant="accent"
+                className="h-13 w-full rounded-2xl bg-[#ff704d] text-[#130b08] hover:bg-[#ff8566]"
+              >
+                {loading ? "Creating passport..." : "Start my journey"}{" "}
+                {!loading && <ArrowRight className="size-4" />}
+              </Button>
+            </form>
+            <p className="mt-7 text-center text-sm text-white/40">
+              Already a traveler?{" "}
+              <Link
+                to="/login"
+                className="font-bold text-[#ff9a78] hover:text-white"
+              >
+                Log in
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
-
 export default Register;
