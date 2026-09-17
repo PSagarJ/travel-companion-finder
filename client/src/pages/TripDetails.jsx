@@ -1,6 +1,18 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation, Link } from "react-router-dom";
+import {
+  ArrowLeft,
+  MapPin,
+  CalendarDays,
+  Compass,
+  User,
+  Users,
+  MessageCircle,
+  Camera,
+} from "lucide-react";
 import api from "../api/axiosInstance";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 const TripDetails = () => {
   const { id } = useParams();
@@ -144,7 +156,7 @@ Notes: This is your curated solo adventure. Have a great trip!
       document.body.removeChild(link);
       URL.revokeObjectURL(downloadUrl); // Clean up browser memory
 
-      setApplyStatus("✨ Itinerary Downloaded Successfully!");
+      setApplyStatus("✨ Itinerary downloaded successfully!");
       return;
     }
 
@@ -168,362 +180,173 @@ Notes: This is your curated solo adventure. Have a great trip!
     }
   };
 
-  if (loading)
+  if (loading) {
     return (
-      <h2 style={{ textAlign: "center", marginTop: "4rem", color: "#666" }}>
-        Loading adventure...
-      </h2>
-    );
-
-  if (loadError || !trip) {
-    return (
-      <div style={{ textAlign: "center", marginTop: "4rem" }}>
-        <h2 style={{ color: "#0f172a" }}>
-          Something went wrong loading this trip.
-        </h2>
-        <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
-          It may have been removed, or there was a connection problem.
-        </p>
-        <Link
-          to="/"
-          style={{
-            background: "#0284c7",
-            color: "white",
-            textDecoration: "none",
-            padding: "0.65rem 1.5rem",
-            borderRadius: "8px",
-            fontWeight: "bold",
-          }}
-        >
-          Back to Home
-        </Link>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <p className="text-muted-foreground">Loading adventure...</p>
       </div>
     );
   }
 
+  if (loadError || !trip) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <h2 className="font-display text-2xl font-semibold text-foreground">
+          Something went wrong loading this trip.
+        </h2>
+        <p className="mt-2 mb-6 text-muted-foreground">
+          It may have been removed, or there was a connection problem.
+        </p>
+        <Button asChild>
+          <Link to="/">Back to home</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const canAccessChat =
+    trip.creatorId === currentUserId ||
+    trip.approvedMembers?.some((m) => m.userId === currentUserId);
+
   return (
-    <div style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
+    <div className="mx-auto max-w-3xl px-4 py-8">
       <Link
         to="/"
-        style={{
-          color: "#0284c7",
-          textDecoration: "none",
-          fontWeight: "bold",
-          marginBottom: "1rem",
-          display: "inline-block",
-        }}
+        className="mb-4 inline-flex items-center gap-1 font-semibold text-primary hover:underline"
       >
-        &larr; Back to Home
+        <ArrowLeft className="size-4" /> Back to home
       </Link>
 
-      <div
-        style={{
-          background: "white",
-          borderRadius: "16px",
-          overflow: "hidden",
-          boxShadow: "0 4px 15px rgba(0,0,0,0.05)",
-        }}
-      >
+      <Card className="overflow-hidden p-0">
         <div
+          className="h-64 w-full bg-muted bg-cover bg-center"
           style={{
-            height: "300px",
-            width: "100%",
-            backgroundColor: "#e2e8f0",
             backgroundImage:
               "url(https://images.unsplash.com/photo-1469854523086-cc02fe5d8800)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
           }}
-        ></div>
+        />
 
-        <div style={{ padding: "2rem" }}>
-          <div
-            style={{
-              display: "flex",
-              justifycontent: "space-between",
-              alignItems: "flex-start",
-              borderBottom: "1px solid #eee",
-              paddingBottom: "1.5rem",
-              marginBottom: "1.5rem",
-            }}
-          >
+        <div className="p-6 md:p-8">
+          <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
             <div>
-              <h1
-                style={{
-                  margin: "0 0 0.5rem 0",
-                  color: "#1f2937",
-                  fontSize: "2rem",
-                }}
-              >
+              <h1 className="font-display text-3xl font-semibold text-foreground">
                 {trip.title}
               </h1>
-              <h3
-                style={{
-                  margin: 0,
-                  color: "#6b7280",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                }}
-              >
-                📍 {trip.destination}
-              </h3>
+              <p className="mt-1.5 flex items-center gap-1.5 text-muted-foreground">
+                <MapPin className="size-4" /> {trip.destination}
+              </p>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <span
-                style={{
-                  display: "block",
-                  fontSize: "1.5rem",
-                  fontWeight: "bold",
-                  color: "#10b981",
-                }}
-              >
+            <div className="text-right">
+              <span className="block text-2xl font-bold text-success">
                 ${trip.estimatedBudget}
               </span>
-              <span style={{ color: "#6b7280", fontSize: "0.9rem" }}>
+              <span className="text-sm text-muted-foreground">
                 Estimated total
               </span>
             </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "1.5rem",
-              marginBottom: "2rem",
-            }}
-          >
-            <div
-              style={{
-                background: "#f8fafc",
-                padding: "1rem",
-                borderRadius: "8px",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  color: "#64748b",
-                  fontSize: "0.85rem",
-                  textTransform: "uppercase",
-                  fontWeight: "bold",
-                }}
-              >
-                Dates
+          <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl bg-secondary/50 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+                <CalendarDays className="size-3.5" /> Dates
               </p>
-              <p
-                style={{
-                  margin: "0.25rem 0 0 0",
-                  color: "#334155",
-                  fontWeight: "bold",
-                }}
-              >
+              <p className="mt-1 font-semibold text-foreground">
                 {trip.startDate} to {trip.endDate}
               </p>
             </div>
-            <div
-              style={{
-                background: "#f8fafc",
-                padding: "1rem",
-                borderRadius: "8px",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  color: "#64748b",
-                  fontSize: "0.85rem",
-                  textTransform: "uppercase",
-                  fontWeight: "bold",
-                }}
-              >
-                Travel Style
+
+            <div className="rounded-xl bg-secondary/50 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+                <Compass className="size-3.5" /> Travel style
               </p>
-              <p
-                style={{
-                  margin: "0.25rem 0 0 0",
-                  color: "#334155",
-                  fontWeight: "bold",
-                }}
-              >
+              <p className="mt-1 font-semibold text-foreground">
                 {trip.travelStyle} • {trip.targetVibe}
               </p>
             </div>
 
-            <div
-              style={{
-                background: "#f8fafc",
-                padding: "1rem",
-                borderRadius: "8px",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  color: "#64748b",
-                  fontSize: "0.85rem",
-                  textTransform: "uppercase",
-                  fontWeight: "bold",
-                }}
-              >
-                Creator
+            <div className="rounded-xl bg-secondary/50 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+                <User className="size-3.5" /> Creator
               </p>
-              <p
-                style={{
-                  margin: "0.25rem 0 0 0",
-                  color: "#334155",
-                  fontWeight: "bold",
-                }}
-              >
-                {trip.creatorId?.name || "Anonymous Traveler"}
+              <p className="mt-1 font-semibold text-foreground">
+                {trip.creatorId?.name || "Anonymous traveler"}
               </p>
             </div>
 
-            {/* Dynamically change the 4th box based on mode */}
-            <div
-              style={{
-                background: "#f8fafc",
-                padding: "1rem",
-                borderRadius: "8px",
-              }}
-            >
-              <p
-                style={{
-                  margin: 0,
-                  color: "#64748b",
-                  fontSize: "0.85rem",
-                  textTransform: "uppercase",
-                  fontWeight: "bold",
-                }}
-              >
-                {isSoloMode ? "Itinerary Status" : "Current Applicants"}
+            <div className="rounded-xl bg-secondary/50 p-4">
+              <p className="flex items-center gap-1.5 text-xs font-bold tracking-wide text-muted-foreground uppercase">
+                <Users className="size-3.5" />
+                {isSoloMode ? "Itinerary status" : "Applicants"}
               </p>
-              <p
-                style={{
-                  margin: "0.25rem 0 0 0",
-                  color: "#334155",
-                  fontWeight: "bold",
-                }}
-              >
+              <p className="mt-1 font-semibold text-foreground">
                 {isSoloMode
-                  ? "Ready for Download"
-                  : `${trip.applicants?.length || 0} travelers applied`}{" "}
+                  ? "Ready for download"
+                  : `${trip.applicants?.length || 0} travelers applied`}
               </p>
             </div>
           </div>
 
-          <div style={{ textAlign: "center", marginTop: "1rem" }}>
+          <div className="text-center">
             {applyStatus ? (
               <div>
-                <div
-                  style={{
-                    padding: "1rem",
-                    background: "#dcfce7",
-                    color: "#166534",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                  }}
-                >
+                <div className="rounded-xl bg-success/15 px-4 py-3 font-semibold text-success">
                   {applyStatus}
                 </div>
-                {(trip.creatorId === currentUserId ||
-                  trip.approvedMembers?.some(
-                    (m) => m.userId === currentUserId,
-                  )) && (
-                  <Link
-                    to={`/chat/${trip._id}`}
-                    style={{
-                      display: "inline-block",
-                      marginTop: "0.75rem",
-                      padding: "0.75rem 1.5rem",
-                      background: "#0284c7",
-                      color: "white",
-                      borderRadius: "8px",
-                      fontWeight: "bold",
-                      textDecoration: "none",
-                    }}
-                  >
-                    💬 Open Trip Chat
-                  </Link>
+                {canAccessChat && (
+                  <Button asChild className="mt-3">
+                    <Link to={`/chat/${trip._id}`}>
+                      <MessageCircle className="size-4" /> Open trip chat
+                    </Link>
+                  </Button>
                 )}
               </div>
             ) : (
-              <button
+              <Button
                 onClick={handleAction}
-                style={{
-                  width: "100%",
-                  padding: "1rem",
-                  border: "none",
-                  borderRadius: "8px",
-                  fontSize: "1.1rem",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                  transition: "background 0.2s",
-                  /* Dynamically change the button color */
-                  background: isSoloMode ? "#10b981" : "#0284c7",
-                  color: "white",
-                }}
+                variant={isSoloMode ? "default" : "accent"}
+                size="lg"
+                className={
+                  isSoloMode
+                    ? "w-full bg-success text-success-foreground hover:bg-success/90"
+                    : "w-full"
+                }
               >
-                {/* Dynamically change the button text */}
                 {isSoloMode
-                  ? "Download Solo Itinerary"
-                  : "Apply to Join This Trip"}
-              </button>
+                  ? "Download solo itinerary"
+                  : "Apply to join this trip"}
+              </Button>
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Trip photos */}
-      <div style={{ marginTop: "2rem" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1rem",
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: "1.3rem", color: "#1f2937" }}>
+      <div className="mt-8">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-xl font-semibold text-foreground">
             Trip photos
           </h2>
           <Link
             to={`/feed?tripId=${trip._id}&destination=${encodeURIComponent(trip.destination)}`}
-            style={{
-              textDecoration: "none",
-              color: "#0284c7",
-              fontWeight: "bold",
-              fontSize: "0.9rem",
-            }}
+            className="flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
           >
-            Share a photo &rarr;
+            <Camera className="size-4" /> Share a photo
           </Link>
         </div>
 
         {tripPosts.length === 0 ? (
-          <p style={{ color: "#94a3b8", fontSize: "0.9rem" }}>
+          <p className="text-sm text-muted-foreground">
             No photos shared for this trip yet.
           </p>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-              gap: "0.75rem",
-            }}
-          >
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
             {tripPosts.map((post) => (
               <img
                 key={post._id}
                 src={post.imageUrl}
                 alt={post.caption || "Trip photo"}
-                style={{
-                  width: "100%",
-                  height: "150px",
-                  objectFit: "cover",
-                  borderRadius: "8px",
-                }}
+                className="h-[150px] w-full rounded-lg object-cover"
               />
             ))}
           </div>

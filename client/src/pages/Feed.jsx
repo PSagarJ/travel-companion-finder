@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { Lock, ImagePlus, MapPin } from "lucide-react";
 import api from "../api/axiosInstance";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 const Feed = () => {
   const [searchParams] = useSearchParams();
@@ -130,378 +136,154 @@ const Feed = () => {
   // silently empty feed.
   if (!loading && authRequired) {
     return (
-      <div
-        style={{
-          maxWidth: "500px",
-          margin: "4rem auto",
-          padding: "0 1rem",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🔒</div>
-        <h1
-          style={{
-            fontSize: "1.5rem",
-            color: "#0f172a",
-            marginBottom: "0.5rem",
-          }}
-        >
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <Lock className="mx-auto mb-3 size-10 text-muted-foreground" />
+        <h1 className="font-display text-2xl font-semibold text-foreground">
           Log in to see travel memories
         </h1>
-        <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
+        <p className="mt-2 mb-6 text-muted-foreground">
           The photo feed is only visible to logged-in members. Log in or create
           an account to view and share travel photos.
         </p>
-        <div
-          style={{
-            display: "flex",
-            gap: "0.75rem",
-            justifyContent: "center",
-          }}
-        >
-          <Link
-            to="/login"
-            style={{
-              background: "#0284c7",
-              color: "white",
-              textDecoration: "none",
-              padding: "0.65rem 1.5rem",
-              borderRadius: "8px",
-              fontWeight: "bold",
-            }}
-          >
-            Log in
-          </Link>
-          <Link
-            to="/register"
-            style={{
-              background: "#f1f5f9",
-              color: "#0f172a",
-              textDecoration: "none",
-              padding: "0.65rem 1.5rem",
-              borderRadius: "8px",
-              fontWeight: "bold",
-            }}
-          >
-            Sign up
-          </Link>
+        <div className="flex justify-center gap-3">
+          <Button asChild>
+            <Link to="/login">Log in</Link>
+          </Button>
+          <Button asChild variant="secondary">
+            <Link to="/register">Sign up</Link>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ maxWidth: "935px", margin: "2rem auto", padding: "0 1rem" }}>
-      <h1
-        style={{
-          fontSize: "1.75rem",
-          color: "#0f172a",
-          marginBottom: "1.5rem",
-        }}
-      >
+    <div className="mx-auto max-w-[935px] px-4 py-8">
+      <h1 className="mb-6 font-display text-3xl font-semibold text-foreground">
         Travel memories
       </h1>
 
       {/* Upload form */}
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          background: "#f8fafc",
-          border: "1px solid #e2e8f0",
-          borderRadius: "12px",
-          padding: "1.25rem",
-          marginBottom: "2rem",
-          maxWidth: "500px",
-        }}
-      >
-        {linkedTripId && (
-          <div
-            style={{
-              background: "#e0f2fe",
-              color: "#0369a1",
-              fontSize: "0.85rem",
-              fontWeight: "600",
-              padding: "0.5rem 0.75rem",
-              borderRadius: "8px",
-              marginBottom: "1rem",
-            }}
-          >
-            Sharing a photo for this trip
-          </div>
-        )}
-        {preview && (
-          <img
-            src={preview}
-            alt="Preview"
-            style={{
-              width: "100%",
-              maxHeight: "320px",
-              objectFit: "cover",
-              borderRadius: "8px",
-              marginBottom: "1rem",
-            }}
+      <Card className="mb-8 max-w-md p-5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          {linkedTripId && (
+            <div className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
+              Sharing a photo for this trip
+            </div>
+          )}
+          {preview && (
+            <img
+              src={preview}
+              alt="Preview"
+              className="max-h-80 w-full rounded-xl object-cover"
+            />
+          )}
+
+          <input
+            id="photo-upload-input"
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="sr-only"
           />
-        )}
-
-        <input
-          id="photo-upload-input"
-          type="file"
-          accept="image/*"
-          onChange={handleFileChange}
-          style={{
-            position: "absolute",
-            width: "1px",
-            height: "1px",
-            padding: 0,
-            margin: "-1px",
-            overflow: "hidden",
-            clip: "rect(0,0,0,0)",
-            border: 0,
-          }}
-        />
-        <label
-          htmlFor="photo-upload-input"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.5rem",
-            width: "100%",
-            padding: "0.85rem",
-            marginBottom: "0.75rem",
-            background: imageFile ? "#e0f2fe" : "white",
-            color: imageFile ? "#0369a1" : "#334155",
-            border: "2px dashed #94a3b8",
-            borderRadius: "8px",
-            fontWeight: "600",
-            cursor: "pointer",
-            boxSizing: "border-box",
-            textAlign: "center",
-          }}
-        >
-          📷 {imageFile ? imageFile.name : "Choose a photo to upload"}
-        </label>
-
-        <input
-          type="text"
-          placeholder="Where was this taken?"
-          value={destination}
-          onChange={(e) => setDestination(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "0.65rem 0.85rem",
-            borderRadius: "8px",
-            border: "1px solid #cbd5e1",
-            marginBottom: "0.75rem",
-            boxSizing: "border-box",
-          }}
-        />
-
-        <textarea
-          placeholder="Say something about this trip..."
-          value={caption}
-          onChange={(e) => setCaption(e.target.value)}
-          rows={3}
-          style={{
-            width: "100%",
-            padding: "0.65rem 0.85rem",
-            borderRadius: "8px",
-            border: "1px solid #cbd5e1",
-            marginBottom: "0.75rem",
-            boxSizing: "border-box",
-            resize: "vertical",
-          }}
-        />
-
-        <button
-          type="submit"
-          disabled={uploading}
-          style={{
-            background: "#0284c7",
-            color: "white",
-            border: "none",
-            padding: "0.75rem 1.5rem",
-            borderRadius: "8px",
-            fontWeight: "bold",
-            cursor: uploading ? "not-allowed" : "pointer",
-            opacity: uploading ? 0.7 : 1,
-          }}
-        >
-          {uploading ? "Posting..." : "Post photo"}
-        </button>
-
-        {status && (
-          <p
-            style={{
-              marginTop: "0.75rem",
-              color: "#0284c7",
-              fontSize: "0.9rem",
-            }}
+          <label
+            htmlFor="photo-upload-input"
+            className={`flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed p-4 text-center font-semibold transition-colors ${
+              imageFile
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-input bg-background text-foreground hover:bg-secondary/50"
+            }`}
           >
-            {status}
-          </p>
-        )}
-      </form>
+            <ImagePlus className="size-4.5" />
+            {imageFile ? imageFile.name : "Choose a photo to upload"}
+          </label>
+
+          <Input
+            type="text"
+            placeholder="Where was this taken?"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+          />
+
+          <Textarea
+            placeholder="Say something about this trip..."
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            rows={3}
+          />
+
+          <Button type="submit" disabled={uploading} className="mt-1 w-full">
+            {uploading ? "Posting..." : "Post photo"}
+          </Button>
+
+          {status && (
+            <p className="text-sm font-medium text-primary">{status}</p>
+          )}
+        </form>
+      </Card>
 
       {/* Feed grid */}
       {loading ? (
-        <p style={{ textAlign: "center", color: "#64748b" }}>
-          Loading memories...
-        </p>
+        <p className="text-center text-muted-foreground">Loading memories...</p>
       ) : posts.length === 0 ? (
-        <p style={{ textAlign: "center", color: "#64748b" }}>
+        <p className="text-center text-muted-foreground">
           No travel photos yet. Be the first to share one!
         </p>
       ) : (
-        <>
-          <style>{`
-            .photo-grid {
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 4px;
-            }
-            @media (max-width: 768px) {
-              .photo-grid {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 2px;
-              }
-            }
-            .photo-grid-item {
-              position: relative;
-              aspect-ratio: 1 / 1;
-              overflow: hidden;
-              cursor: pointer;
-              background: #e2e8f0;
-            }
-            .photo-grid-item img {
-              width: 100%;
-              height: 100%;
-              object-fit: cover;
-              display: block;
-              transition: transform 0.15s ease;
-            }
-            .photo-grid-item:hover img {
-              transform: scale(1.04);
-            }
-            .photo-grid-overlay {
-              position: absolute;
-              inset: 0;
-              background: rgba(15, 23, 42, 0.55);
-              color: white;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              text-align: center;
-              padding: 0.5rem;
-              font-size: 0.8rem;
-              opacity: 0;
-              transition: opacity 0.15s ease;
-            }
-            .photo-grid-item:hover .photo-grid-overlay {
-              opacity: 1;
-            }
-          `}</style>
-
-          <div className="photo-grid">
-            {posts.map((post) => (
-              <div
-                key={post._id}
-                className="photo-grid-item"
-                onClick={() => setSelectedPost(post)}
-              >
-                <img src={post.imageUrl} alt={post.caption || "Travel photo"} />
-                <div className="photo-grid-overlay">
-                  {post.userName}
-                  {post.destination ? ` · ${post.destination}` : ""}
-                </div>
+        <div className="grid grid-cols-3 gap-0.5 md:grid-cols-4 md:gap-1">
+          {posts.map((post) => (
+            <div
+              key={post._id}
+              className="group relative aspect-square cursor-pointer overflow-hidden bg-muted"
+              onClick={() => setSelectedPost(post)}
+            >
+              <img
+                src={post.imageUrl}
+                alt={post.caption || "Travel photo"}
+                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/55 p-2 text-center text-xs text-white opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                {post.userName}
+                {post.destination ? ` · ${post.destination}` : ""}
               </div>
-            ))}
-          </div>
-        </>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Lightbox for viewing a single post's full details */}
-      {selectedPost && (
-        <div
-          onClick={() => setSelectedPost(null)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15, 23, 42, 0.85)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1rem",
-            zIndex: 1000,
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: "white",
-              borderRadius: "12px",
-              overflow: "hidden",
-              maxWidth: "500px",
-              width: "100%",
-              maxHeight: "90vh",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
+      <Dialog
+        open={!!selectedPost}
+        onOpenChange={(open) => !open && setSelectedPost(null)}
+      >
+        {selectedPost && (
+          <DialogContent className="max-w-md p-0">
             <img
               src={selectedPost.imageUrl}
               alt={selectedPost.caption || "Travel photo"}
-              style={{
-                width: "100%",
-                maxHeight: "60vh",
-                objectFit: "cover",
-                display: "block",
-              }}
+              className="max-h-[60vh] w-full object-cover"
             />
-            <div style={{ padding: "1rem" }}>
-              <p
-                style={{
-                  fontWeight: "bold",
-                  margin: "0 0 0.25rem 0",
-                  color: "#0f172a",
-                }}
-              >
+            <div className="p-4">
+              <p className="font-semibold text-foreground">
                 <Link
                   to={`/profile/${selectedPost.userId}`}
-                  style={{ color: "#0f172a", textDecoration: "none" }}
+                  className="hover:underline"
                 >
                   {selectedPost.userName}
                 </Link>
                 {selectedPost.destination && (
-                  <span style={{ color: "#64748b", fontWeight: "normal" }}>
-                    {" "}
-                    · {selectedPost.destination}
+                  <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
+                    <MapPin className="size-3.5" /> {selectedPost.destination}
                   </span>
                 )}
               </p>
               {selectedPost.caption && (
-                <p style={{ margin: 0, color: "#334155" }}>
-                  {selectedPost.caption}
-                </p>
+                <p className="mt-1 text-foreground">{selectedPost.caption}</p>
               )}
-              <button
-                onClick={() => setSelectedPost(null)}
-                style={{
-                  marginTop: "0.85rem",
-                  background: "#f1f5f9",
-                  border: "none",
-                  padding: "0.5rem 1rem",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontSize: "0.85rem",
-                }}
-              >
-                Close
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 };

@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { Lock, AlertCircle, Sparkles, MapPin, Users } from "lucide-react";
 import api from "../api/axiosInstance";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+
+// Cover photos cycled across match cards
+const coverPhotos = [
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1000",
+  "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1000",
+  "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000",
+];
 
 const Matches = () => {
   const [matches, setMatches] = useState([]);
@@ -36,67 +47,92 @@ const Matches = () => {
   };
 
   useEffect(() => {
-    fetchMatches();
+    // The effect uses its own local function (not the outer fetchMatches,
+    // which the "Try again" button also uses) so every state update here is
+    // properly gated behind the ignore flag for this specific mount.
+    let ignore = false;
+
+    const loadOnMount = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        if (!ignore) {
+          setAuthRequired(true);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await api.get("/api/matches");
+        if (!ignore) setMatches(response.data);
+      } catch (err) {
+        if (!ignore) {
+          if (err.response?.status === 401) {
+            setAuthRequired(true);
+          } else {
+            console.error("Matches fetch failed:", err.message);
+            setError("Unable to load matches right now.");
+          }
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+
+    loadOnMount();
+
+    return () => {
+      ignore = true;
+    };
   }, []);
 
-  if (loading)
+  if (loading) {
     return (
-      <h2 style={{ textAlign: "center", marginTop: "4rem", color: "#666" }}>
-        Finding your travel buddies...
-      </h2>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <p className="text-muted-foreground">Finding your travel buddies...</p>
+      </div>
     );
+  }
 
   if (authRequired) {
     return (
-      <div style={{ textAlign: "center", marginTop: "4rem" }}>
-        <h2 style={{ color: "#0f172a" }}>Log in to see your matches</h2>
-        <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <Lock className="mx-auto mb-3 size-10 text-muted-foreground" />
+        <h2 className="font-display text-2xl font-semibold text-foreground">
+          Log in to see your matches
+        </h2>
+        <p className="mt-2 mb-6 text-muted-foreground">
           You need to be logged in to find travel buddies.
         </p>
-        <Link
-          to="/login"
-          style={{
-            background: "#0284c7",
-            color: "white",
-            textDecoration: "none",
-            padding: "0.65rem 1.5rem",
-            borderRadius: "8px",
-            fontWeight: "bold",
-          }}
-        >
-          Log in
-        </Link>
+        <Button asChild>
+          <Link to="/login">Log in</Link>
+        </Button>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ textAlign: "center", marginTop: "4rem" }}>
-        <h2 style={{ color: "#0f172a" }}>{error}</h2>
-        <button
-          onClick={fetchMatches}
-          style={{
-            marginTop: "1rem",
-            background: "#f1f5f9",
-            border: "none",
-            padding: "0.65rem 1.5rem",
-            borderRadius: "8px",
-            fontWeight: "bold",
-            cursor: "pointer",
-          }}
-        >
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <AlertCircle className="mx-auto mb-3 size-10 text-destructive" />
+        <h2 className="font-display text-2xl font-semibold text-foreground">
+          {error}
+        </h2>
+        <Button variant="secondary" className="mt-4" onClick={fetchMatches}>
           Try again
-        </button>
+        </Button>
       </div>
     );
   }
 
   if (matches.length === 0) {
     return (
-      <div style={{ textAlign: "center", marginTop: "4rem" }}>
-        <h2 style={{ color: "#0f172a" }}>No matches found yet</h2>
-        <p style={{ color: "#64748b" }}>
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <Users className="mx-auto mb-3 size-10 text-muted-foreground" />
+        <h2 className="font-display text-2xl font-semibold text-foreground">
+          No matches found yet
+        </h2>
+        <p className="mt-2 text-muted-foreground">
           Check back once more travelers join, or update your travel style in
           your profile.
         </p>
@@ -104,239 +140,87 @@ const Matches = () => {
     );
   }
 
-  // Array of beautiful default cover photos for travelers
-  const coverPhotos = [
-    "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1000",
-    "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=1000",
-    "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000",
-  ];
-
   return (
-    <div
-      style={{
-        maxWidth: "1100px",
-        margin: "2rem auto",
-        padding: "0 1rem",
-        paddingBottom: "4rem",
-      }}
-    >
-      {/* Page Header */}
-      <div style={{ textAlign: "center", marginBottom: "3rem" }}>
-        <h1
-          style={{
-            color: "#0f172a",
-            fontSize: "2.5rem",
-            margin: "0 0 0.5rem 0",
-          }}
-        >
-          Your Travel Matches
+    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16">
+      <div className="mb-10 text-center">
+        <h1 className="font-display text-4xl font-semibold text-foreground">
+          Your travel matches
         </h1>
-        <p style={{ color: "#64748b", fontSize: "1.1rem" }}>
+        <p className="mt-2 text-lg text-muted-foreground">
           We found these explorers based on your travel style and budget.
         </p>
       </div>
 
-      {/* Grid of Traveler Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-          gap: "2rem",
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-7">
         {matches.map((match, index) => {
-          // Pick a random cover photo based on the index
           const bgImage = coverPhotos[index % coverPhotos.length];
           const initial = match.user?.name
             ? match.user.name.charAt(0).toUpperCase()
             : "👤";
 
           return (
-            <div
+            <Card
               key={index}
-              style={{
-                background: "white",
-                borderRadius: "20px",
-                overflow: "hidden",
-                boxShadow: "0 10px 25px rgba(0,0,0,0.05)",
-                border: "1px solid #f1f5f9",
-                display: "flex",
-                flexDirection: "column",
-                transition: "transform 0.2s, box-shadow 0.2s",
-                cursor: "pointer",
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.transform = "translateY(-5px)";
-                e.currentTarget.style.boxShadow = "0 15px 35px rgba(0,0,0,0.1)";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow =
-                  "0 10px 25px rgba(0,0,0,0.05)";
-              }}
+              className="overflow-hidden p-0 transition-all duration-200 hover:-translate-y-1 hover:shadow-xl"
             >
-              {/* Top Banner (Cover Photo & Match Score) */}
+              {/* Cover photo + match score */}
               <div
-                style={{
-                  height: "140px",
-                  backgroundImage: `url(${bgImage})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  position: "relative",
-                }}
+                className="relative h-36 bg-cover bg-center"
+                style={{ backgroundImage: `url(${bgImage})` }}
               >
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "1rem",
-                    right: "1rem",
-                    background: "white",
-                    padding: "0.4rem 0.8rem",
-                    borderRadius: "20px",
-                    fontWeight: "900",
-                    color: "#10b981",
-                    boxShadow: "0 4px 10px rgba(0,0,0,0.15)",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                    fontSize: "0.95rem",
-                  }}
+                <Badge
+                  variant="success"
+                  className="absolute top-4 right-4 gap-1 bg-white text-success shadow-md"
                 >
-                  <span>✨</span>{" "}
+                  <Sparkles className="size-3" />
                   {match.matchScore || match.matchPercentage || 0}%
-                </div>
+                </Badge>
               </div>
 
-              {/* Bottom Body (Avatar & Info) */}
-              <div
-                style={{
-                  padding: "0 1.5rem 1.5rem 1.5rem",
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                {/* Overlapping Avatar */}
-                <div style={{ marginTop: "-35px", marginBottom: "1rem" }}>
-                  <div
-                    style={{
-                      width: "70px",
-                      height: "70px",
-                      borderRadius: "50%",
-                      background: "#e2e8f0",
-                      border: "4px solid white",
-                      display: "flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      fontSize: "2rem",
-                      fontWeight: "bold",
-                      color: "#475569",
-                      boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
-                    }}
-                  >
+              {/* Body */}
+              <div className="flex flex-1 flex-col px-6 pb-6">
+                {/* Overlapping avatar */}
+                <div className="-mt-9 mb-4">
+                  <div className="flex size-[70px] items-center justify-center rounded-full border-4 border-card bg-secondary text-2xl font-bold text-foreground shadow-md">
                     {initial}
                   </div>
                 </div>
 
-                {/* Name & Travel Style */}
-                <h2
-                  style={{
-                    margin: "0 0 0.25rem 0",
-                    fontSize: "1.4rem",
-                    color: "#0f172a",
-                  }}
-                >
+                <h2 className="text-xl font-semibold text-foreground">
                   {match.user?.name || "Travel Buddy"}
                 </h2>
-                <span
-                  style={{
-                    color: "#0284c7",
-                    fontSize: "0.9rem",
-                    fontWeight: "bold",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    marginBottom: "1.25rem",
-                  }}
-                >
+                <span className="mb-5 text-sm font-bold tracking-wide text-primary uppercase">
                   {match.user?.travelStyle || "Explorer"}
                 </span>
 
-                {/* Badges section */}
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "0.5rem",
-                    marginBottom: "1.25rem",
-                  }}
-                >
-                  {match.user?.vibeBadges?.map((badge, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        background: "#f8fafc",
-                        color: "#475569",
-                        fontSize: "0.8rem",
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        border: "1px solid #e2e8f0",
-                        fontWeight: "500",
-                      }}
-                    >
-                      {badge}
-                    </span>
-                  ))}
-                  {(!match.user?.vibeBadges ||
-                    match.user.vibeBadges.length === 0) && (
-                    <span
-                      style={{
-                        fontSize: "0.8rem",
-                        color: "#94a3b8",
-                        fontStyle: "italic",
-                      }}
-                    >
+                {/* Vibe badges */}
+                <div className="mb-5 flex flex-wrap gap-2">
+                  {match.user?.vibeBadges?.length > 0 ? (
+                    match.user.vibeBadges.map((badge, i) => (
+                      <Badge key={i} variant="outline">
+                        {badge}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm italic text-muted-foreground">
                       No badges yet
                     </span>
                   )}
                 </div>
 
-                {/* Shared Destinations */}
-                <p
-                  style={{
-                    margin: "0 0 1.5rem 0",
-                    fontSize: "0.9rem",
-                    color: "#64748b",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <span style={{ fontSize: "1.1rem" }}>📍</span>
+                {/* Shared destinations */}
+                <p className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <MapPin className="size-4" />
                   {match.sharedDestinations?.join(", ") || "Ready to explore"}
                 </p>
 
-                {/* Action Button */}
-                <Link
-                  to={`/profile/${match.user?._id}`}
-                  style={{
-                    marginTop: "auto",
-                    display: "block",
-                    textAlign: "center",
-                    background: "#0f172a",
-                    color: "white",
-                    padding: "0.85rem",
-                    borderRadius: "10px",
-                    textDecoration: "none",
-                    fontWeight: "bold",
-                    transition: "background 0.2s",
-                  }}
-                  onMouseOver={(e) => (e.target.style.background = "#1e293b")}
-                  onMouseOut={(e) => (e.target.style.background = "#0f172a")}
-                >
-                  View Full Profile
-                </Link>
+                <Button asChild className="mt-auto w-full">
+                  <Link to={`/profile/${match.user?._id}`}>
+                    View full profile
+                  </Link>
+                </Button>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>

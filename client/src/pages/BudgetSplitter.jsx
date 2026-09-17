@@ -1,7 +1,18 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import io from "socket.io-client";
+import {
+  ArrowLeft,
+  Wallet,
+  PlusCircle,
+  ArrowRightLeft,
+  Receipt,
+  PartyPopper,
+} from "lucide-react";
 import api from "../api/axiosInstance";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -11,6 +22,7 @@ const BudgetSplitter = () => {
   const [trip, setTrip] = useState(null);
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [formError, setFormError] = useState("");
 
   // Form input states
   const [description, setDescription] = useState("");
@@ -23,14 +35,20 @@ const BudgetSplitter = () => {
   const currentUserId = currentUser ? currentUser.id : null;
 
   useEffect(() => {
+    // Prevents a stale request for a previously-viewed trip's ledger from
+    // overwriting this one if it resolves out of order.
+    let ignore = false;
+
     const loadLedgerData = async () => {
       try {
         // 1. Fetch trip document details
         const tripResponse = await api.get(`/api/trips/${id}`);
+        if (ignore) return;
         setTrip(tripResponse.data);
 
         // 2. Fetch persistent expenses
         const expenseResponse = await api.get(`/api/expenses/${id}`);
+        if (ignore) return;
         setExpenses(expenseResponse.data);
 
         // 🔑 FIX: Use the stable primitive ID here
@@ -40,11 +58,17 @@ const BudgetSplitter = () => {
 
         setLoading(false);
       } catch (error) {
-        console.error("Error loading live ledger matrix:", error.message);
-        setLoading(false);
+        if (!ignore) {
+          console.error("Error loading live ledger matrix:", error.message);
+          setLoading(false);
+        }
       }
     };
     loadLedgerData();
+
+    return () => {
+      ignore = true;
+    };
   }, [id, currentUserId]);
 
   // Live-sync expenses across devices/sessions viewing the same trip —
@@ -72,13 +96,15 @@ const BudgetSplitter = () => {
     };
   }, [id]);
 
-  // ... rest of your handleAddExpense function and return statement stay exactly the same!
-
   // Handle adding an expense permanently to MongoDB
   const handleAddExpense = async (e) => {
     e.preventDefault();
-    if (!description || !amount || !paidBy)
-      return alert("Please fill out all fields!");
+    setFormError("");
+
+    if (!description || !amount || !paidBy) {
+      setFormError("Please fill out all fields.");
+      return;
+    }
 
     // Map out the correct visual descriptor name for who logged the payment item
     let payerName = "Unknown Crew Member";
@@ -109,7 +135,7 @@ const BudgetSplitter = () => {
       setAmount("");
     } catch (error) {
       console.error("Failed to save transaction item records:", error.message);
-      alert("Error saving transaction data entry to cloud storage logs.");
+      setFormError("Something went wrong saving that expense. Try again.");
     }
   };
 
@@ -173,196 +199,87 @@ const BudgetSplitter = () => {
 
   const settlementsList = calculateSettlements();
 
-  if (loading)
+  if (loading) {
     return (
-      <h2 style={{ textAlign: "center", marginTop: "4rem", color: "#666" }}>
-        Loading Ledger...
-      </h2>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <p className="text-muted-foreground">Loading ledger...</p>
+      </div>
     );
-  if (!trip)
+  }
+
+  if (!trip) {
     return (
-      <h2 style={{ textAlign: "center", marginTop: "4rem", color: "#ef4444" }}>
-        Trip not found!
-      </h2>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <p className="font-semibold text-destructive">Trip not found!</p>
+      </div>
     );
+  }
 
   return (
-    <div style={{ maxWidth: "900px", margin: "2rem auto", padding: "0 1rem" }}>
+    <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
         to="/dashboard"
-        style={{
-          color: "#0284c7",
-          textDecoration: "none",
-          fontWeight: "bold",
-          marginBottom: "1rem",
-          display: "inline-block",
-        }}
+        className="mb-4 inline-flex items-center gap-1 font-semibold text-primary hover:underline"
       >
-        &larr; Back to Dashboard
+        <ArrowLeft className="size-4" /> Back to dashboard
       </Link>
 
-      <div
-        style={{
-          background: "#0f172a",
-          color: "white",
-          padding: "2rem",
-          borderRadius: "16px",
-          marginBottom: "2rem",
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: "2.2rem" }}>Trip Ledger</h1>
-        <p
-          style={{
-            margin: "0.5rem 0 0 0",
-            color: "#94a3b8",
-            fontSize: "1.1rem",
-          }}
-        >
-          🌐 Real-time Expenses for: <strong>{trip.title}</strong>
+      <div className="mb-8 rounded-2xl bg-slate-900 p-8 text-white">
+        <h1 className="flex items-center gap-2 font-display text-3xl font-semibold">
+          <Wallet className="size-7" /> Trip ledger
+        </h1>
+        <p className="mt-1.5 text-slate-400">
+          Real-time expenses for{" "}
+          <strong className="text-white">{trip.title}</strong>
         </p>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-          gap: "1.5rem",
-          marginBottom: "2.5rem",
-        }}
-      >
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "1.5rem",
-            borderRadius: "12px",
-            color: "white",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.85rem",
-              color: "#94a3b8",
-              textTransform: "uppercase",
-              fontWeight: "bold",
-            }}
-          >
-            Total Trip Cost
+      <div className="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="rounded-xl bg-slate-800 p-6 text-white">
+          <span className="text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Total trip cost
           </span>
-          <h2
-            style={{
-              fontSize: "2.5rem",
-              color: "#10b981",
-              margin: "0.5rem 0 0 0",
-            }}
-          >
+          <h2 className="mt-2 text-4xl font-bold text-success">
             ₹{totalCost.toFixed(2)}
           </h2>
         </div>
-        <div
-          style={{
-            background: "#1e293b",
-            padding: "1.5rem",
-            borderRadius: "12px",
-            color: "white",
-          }}
-        >
-          <span
-            style={{
-              fontSize: "0.85rem",
-              color: "#94a3b8",
-              textTransform: "uppercase",
-              fontWeight: "bold",
-            }}
-          >
-            Per Person Share ({totalCrewCount} Way Split)
+        <div className="rounded-xl bg-slate-800 p-6 text-white">
+          <span className="text-xs font-bold tracking-wide text-slate-400 uppercase">
+            Per person share ({totalCrewCount}-way split)
           </span>
-          <h2
-            style={{
-              fontSize: "2.5rem",
-              color: "#f59e0b",
-              margin: "0.5rem 0 0 0",
-            }}
-          >
+          <h2 className="mt-2 text-4xl font-bold text-accent">
             ₹{perPersonShare.toFixed(2)}
           </h2>
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 768px) {
-          .budget-main-grid {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
-      <div
-        className="budget-main-grid"
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1.2fr 1fr",
-          gap: "2rem",
-        }}
-      >
-        <div
-          style={{
-            background: "white",
-            padding: "1.5rem",
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-            boxShadow: "0 4px 6px rgba(0,0,0,0.02)",
-          }}
-        >
-          <h3
-            style={{ marginTop: 0, marginBottom: "1.5rem", color: "#1e293b" }}
-          >
-            Add Expense
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-[1.2fr_1fr]">
+        <Card className="p-6">
+          <h3 className="mb-5 flex items-center gap-2 font-semibold text-foreground">
+            <PlusCircle className="size-4.5" /> Add expense
           </h3>
 
-          <form
-            onSubmit={handleAddExpense}
-            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-          >
-            <input
+          <form onSubmit={handleAddExpense} className="flex flex-col gap-3">
+            <Input
               type="text"
               placeholder="What did you buy?"
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                boxSizing: "border-box",
-              }}
             />
 
-            <input
+            <Input
               type="number"
               placeholder="How much? (₹)"
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                boxSizing: "border-box",
-              }}
             />
 
             <select
               value={paidBy}
               onChange={(e) => setPaidBy(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                background: "white",
-                cursor: "pointer",
-              }}
+              className="h-11 w-full cursor-pointer rounded-full border border-input bg-background px-5 text-sm shadow-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
             >
               <option value="" disabled>
                 Who paid?
@@ -375,77 +292,38 @@ const BudgetSplitter = () => {
               ))}
             </select>
 
-            <button
-              type="submit"
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                background: "#0284c7",
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontWeight: "bold",
-                cursor: "pointer",
-                fontSize: "1rem",
-              }}
-            >
-              Log Expense
-            </button>
+            {formError && (
+              <p className="text-sm font-medium text-destructive">
+                {formError}
+              </p>
+            )}
+
+            <Button type="submit" className="mt-1 w-full">
+              Log expense
+            </Button>
           </form>
-        </div>
+        </Card>
 
         <div>
-          <h3
-            style={{ marginTop: 0, marginBottom: "1.5rem", color: "#1e293b" }}
-          >
-            How to Settle Up
+          <h3 className="mb-5 flex items-center gap-2 font-semibold text-foreground">
+            <ArrowRightLeft className="size-4.5" /> How to settle up
           </h3>
           {settlementsList.length === 0 ? (
-            <div
-              style={{
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                padding: "1.25rem",
-                borderRadius: "12px",
-                color: "#166534",
-                fontWeight: "bold",
-                textAlign: "center",
-              }}
-            >
-              🎉 Everyone is perfectly settled up!
+            <div className="flex items-center justify-center gap-2 rounded-xl bg-success/15 p-5 text-center font-semibold text-success">
+              <PartyPopper className="size-4.5" /> Everyone is perfectly settled
+              up!
             </div>
           ) : (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.75rem",
-              }}
-            >
+            <div className="flex flex-col gap-3">
               {settlementsList.map((step, idx) => (
                 <div
                   key={idx}
-                  style={{
-                    background: "#fff7ed",
-                    border: "1px solid #ffedd5",
-                    padding: "1rem",
-                    borderRadius: "10px",
-                    color: "#c2410c",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
+                  className="flex items-center justify-between rounded-xl bg-accent/10 p-4"
                 >
-                  <span style={{ fontSize: "0.95rem" }}>
+                  <span className="text-sm text-foreground">
                     <strong>{step.from}</strong> pays <strong>{step.to}</strong>
                   </span>
-                  <span
-                    style={{
-                      fontSize: "1.1rem",
-                      fontWeight: "bold",
-                      color: "#ea580c",
-                    }}
-                  >
+                  <span className="text-lg font-bold text-accent">
                     ₹{step.amount.toFixed(2)}
                   </span>
                 </div>
@@ -455,55 +333,30 @@ const BudgetSplitter = () => {
         </div>
       </div>
 
-      <div
-        style={{
-          marginTop: "2.5rem",
-          borderTop: "1px solid #e5e7eb",
-          paddingTop: "1.5rem",
-        }}
-      >
-        <h3 style={{ color: "#1e293b" }}>Recent Transactions</h3>
+      <div className="mt-10 border-t border-border pt-6">
+        <h3 className="mb-4 flex items-center gap-2 font-semibold text-foreground">
+          <Receipt className="size-4.5" /> Recent transactions
+        </h3>
         {expenses.length === 0 ? (
-          <p style={{ color: "#94a3b8", fontStyle: "italic" }}>
+          <p className="italic text-muted-foreground">
             No expenses logged yet for this trip itinerary.
           </p>
         ) : (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.75rem",
-              marginTop: "1rem",
-            }}
-          >
+          <div className="flex flex-col gap-3">
             {expenses.map((exp) => (
               <div
                 key={exp._id || exp.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "1rem",
-                  background: "#f8fafc",
-                  borderRadius: "8px",
-                  border: "1px solid #e5e7eb",
-                }}
+                className="flex items-center justify-between rounded-xl bg-secondary/50 p-4"
               >
                 <div>
-                  <strong style={{ color: "#1e293b", display: "block" }}>
+                  <strong className="block text-foreground">
                     {exp.description}
                   </strong>
-                  <span style={{ fontSize: "0.85rem", color: "#64748b" }}>
+                  <span className="text-sm text-muted-foreground">
                     Paid by: {exp.payerName}
                   </span>
                 </div>
-                <span
-                  style={{
-                    fontSize: "1.2rem",
-                    fontWeight: "bold",
-                    color: "#1e293b",
-                  }}
-                >
+                <span className="text-lg font-bold text-foreground">
                   ₹{exp.amount.toFixed(2)}
                 </span>
               </div>
