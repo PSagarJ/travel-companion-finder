@@ -364,8 +364,7 @@ const Home = () => {
                     {trip.title}
                   </h3>
                   <Link
-                    to={`/destination/${trip._id}`}
-                    state={{ mode: isSolo ? "solo" : "group" }}
+                    to={`/explore/${trip._id}`}
                     className="mt-5 inline-flex items-center gap-2 text-sm font-bold text-[#ffb09a] transition group-hover:gap-3"
                   >
                     {isSolo ? "Get itinerary" : "Find a crew"}{" "}
