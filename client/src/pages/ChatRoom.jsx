@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import io from "socket.io-client";
+import { ArrowLeft, MessageCircle, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 // 🌐 Establish dynamic URL for production Render deployment vs local fallback
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -90,93 +93,34 @@ const ChatRoom = () => {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "600px",
-        margin: "2rem auto",
-        padding: "0 1rem",
-        height: "80vh",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
+    <div className="mx-auto flex h-[80vh] max-w-xl flex-col px-4 py-8">
       <Link
         to="/dashboard"
-        style={{
-          color: "#0284c7",
-          textDecoration: "none",
-          fontWeight: "bold",
-          marginBottom: "1rem",
-          display: "inline-block",
-        }}
+        className="mb-4 inline-flex items-center gap-1 font-semibold text-primary hover:underline"
       >
-        &larr; Back to Dashboard
+        <ArrowLeft className="size-4" /> Back to dashboard
       </Link>
 
       {/* Header */}
-      <div
-        style={{
-          background: "#0284c7",
-          color: "white",
-          padding: "1rem",
-          borderRadius: "12px 12px 0 0",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h2 style={{ margin: 0, fontSize: "1.2rem" }}>💬 Group Chat</h2>
-        <span
-          style={{
-            fontSize: "0.9rem",
-            background: "rgba(255,255,255,0.2)",
-            padding: "4px 10px",
-            borderRadius: "20px",
-          }}
-        >
-          Trip ID: {tripId}
+      <div className="flex items-center justify-between rounded-t-2xl bg-primary px-5 py-4 text-primary-foreground">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <MessageCircle className="size-5" /> Group chat
+        </h2>
+        <span className="rounded-full bg-white/20 px-3 py-1 text-xs">
+          Trip #{tripId.slice(-6)}
         </span>
       </div>
 
       {(!token || chatError) && (
-        <div
-          style={{
-            background: "#fee2e2",
-            color: "#991b1b",
-            padding: "0.75rem 1rem",
-            fontSize: "0.9rem",
-            fontWeight: "600",
-            textAlign: "center",
-          }}
-        >
+        <div className="bg-destructive/10 px-4 py-3 text-center text-sm font-semibold text-destructive">
           {!token ? "You must be logged in to use chat." : chatError}
         </div>
       )}
 
       {/* Chat Window */}
-      <div
-        style={{
-          flex: 1,
-          background: "#f0f2f5",
-          padding: "1.5rem",
-          overflowY: "auto",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1rem",
-          borderLeft: "1px solid #ccc",
-          borderRight: "1px solid #ccc",
-        }}
-      >
-        <div style={{ textAlign: "center", margin: "1rem 0" }}>
-          <span
-            style={{
-              background: "#e2e8f0",
-              color: "#475569",
-              fontSize: "0.8rem",
-              padding: "4px 12px",
-              borderRadius: "20px",
-            }}
-          >
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto border-x border-border bg-secondary/30 p-5">
+        <div className="my-2 text-center">
+          <span className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
             Welcome to the trip chat! Start planning your adventure.
           </span>
         </div>
@@ -186,41 +130,27 @@ const ChatRoom = () => {
           return (
             <div
               key={index}
-              style={{
-                display: "flex",
-                justifyContent: isMe ? "flex-end" : "flex-start",
-              }}
+              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
             >
               <div
-                style={{
-                  background: isMe ? "#dcf8c6" : "white",
-                  padding: "0.75rem 1rem",
-                  borderRadius: isMe ? "12px 12px 0 12px" : "12px 12px 12px 0",
-                  maxWidth: "70%",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                }}
+                className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
+                  isMe
+                    ? "rounded-br-sm bg-primary text-primary-foreground"
+                    : "rounded-bl-sm bg-card text-card-foreground"
+                }`}
               >
                 {!isMe && (
-                  <div
-                    style={{
-                      fontSize: "0.75rem",
-                      fontWeight: "bold",
-                      color: "#0284c7",
-                      marginBottom: "4px",
-                    }}
-                  >
+                  <div className="mb-1 text-xs font-bold text-primary">
                     {msg.sender}
                   </div>
                 )}
-                <div style={{ color: "#333", marginBottom: "4px" }}>
-                  {msg.text}
-                </div>
+                <div className={isMe ? "" : "text-foreground"}>{msg.text}</div>
                 <div
-                  style={{
-                    fontSize: "0.7rem",
-                    color: "#888",
-                    textAlign: "right",
-                  }}
+                  className={`mt-1 text-right text-[0.7rem] ${
+                    isMe
+                      ? "text-primary-foreground/70"
+                      : "text-muted-foreground"
+                  }`}
                 >
                   {msg.time}
                 </div>
@@ -231,49 +161,18 @@ const ChatRoom = () => {
       </div>
 
       {/* Input Area */}
-      <div
-        style={{
-          background: "#f0f2f5",
-          padding: "1rem",
-          borderRadius: "0 0 12px 12px",
-          display: "flex",
-          gap: "0.5rem",
-          border: "1px solid #ccc",
-          borderTop: "none",
-        }}
-      >
-        <input
+      <div className="flex gap-2 rounded-b-2xl border border-t-0 border-border bg-secondary/30 p-4">
+        <Input
           type="text"
           value={currentMessage}
           onChange={(e) => setCurrentMessage(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Type a message..."
-          style={{
-            flex: 1,
-            padding: "0.75rem",
-            borderRadius: "24px",
-            border: "none",
-            outline: "none",
-            fontSize: "1rem",
-          }}
+          className="flex-1"
         />
-        <button
-          onClick={sendMessage}
-          style={{
-            background: "#0284c7",
-            color: "white",
-            border: "none",
-            borderRadius: "50%",
-            width: "45px",
-            height: "45px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            cursor: "pointer",
-          }}
-        >
-          ➤
-        </button>
+        <Button onClick={sendMessage} size="icon" aria-label="Send message">
+          <Send className="size-4.5" />
+        </Button>
       </div>
     </div>
   );

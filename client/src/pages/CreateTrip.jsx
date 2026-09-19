@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import api from "../api/axiosInstance";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const fieldLabelClass =
+  "mb-1.5 block text-xs font-bold tracking-wide text-foreground uppercase";
+const selectClass =
+  "h-11 w-full rounded-full border border-input bg-background px-5 text-sm shadow-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30";
 
 const CreateTrip = () => {
   const navigate = useNavigate();
@@ -38,315 +46,114 @@ const CreateTrip = () => {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        minHeight: "calc(100vh - 70px)",
-        background: "#fff",
-      }}
-    >
-      {/* LEFT SIDE: Visual Inspiration */}
+    <div className="flex min-h-[calc(100vh-70px)] flex-col bg-background md:flex-row">
+      {/* Visual side */}
       <div
+        className="relative h-44 shrink-0 bg-cover bg-center md:h-auto md:flex-1"
         style={{
-          flex: 1,
-          display: "block",
           backgroundImage:
             'url("https://images.unsplash.com/photo-1503220317375-aaad61436b1b?q=80&w=2000")',
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          position: "relative",
         }}
       >
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(to top, rgba(0,0,0,0.8), rgba(0,0,0,0.2))",
-          }}
-        ></div>
-        <div
-          style={{
-            position: "absolute",
-            bottom: "10%",
-            left: "10%",
-            right: "10%",
-            color: "white",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "2.5rem",
-              fontWeight: "900",
-              marginBottom: "1rem",
-              textShadow: "0 2px 4px rgba(0,0,0,0.3)",
-            }}
-          >
-            Plant the flag. <br />
-            Gather the crew.
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-x-6 bottom-6 text-white md:inset-x-[10%] md:bottom-[10%]">
+          <h2 className="font-display text-2xl leading-tight font-bold text-balance md:text-4xl">
+            Plant the flag.
+            <br className="hidden md:block" /> Gather the crew.
           </h2>
-          <p style={{ fontSize: "1.2rem", color: "#e2e8f0" }}>
+          <p className="mt-2 hidden text-white/80 md:block">
             Post your dream itinerary and let our matching algorithm find the
             perfect travel buddies to join you.
           </p>
         </div>
       </div>
 
-      {/* RIGHT SIDE: The Form */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          padding: "3rem 10%",
-          background: "#f8fafc",
-          overflowY: "auto",
-        }}
-      >
-        <div style={{ maxWidth: "450px", width: "100%", margin: "0 auto" }}>
+      {/* Form side */}
+      <div className="flex flex-1 items-center justify-center overflow-y-auto px-6 py-10 md:px-[10%]">
+        <div className="w-full max-w-md">
           <Link
             to="/"
-            style={{
-              color: "#0284c7",
-              textDecoration: "none",
-              fontWeight: "bold",
-              marginBottom: "1.5rem",
-              display: "inline-block",
-            }}
+            className="mb-4 inline-flex items-center gap-1 font-semibold text-primary hover:underline"
           >
-            &larr; Back to Home
+            <ArrowLeft className="size-4" /> Back to home
           </Link>
 
-          <h1
-            style={{
-              fontSize: "2rem",
-              color: "#0f172a",
-              margin: "0 0 0.5rem 0",
-            }}
-          >
-            Post a New Trip
+          <h1 className="font-display text-3xl font-semibold text-foreground">
+            Post a new trip
           </h1>
-          <p style={{ color: "#64748b", marginBottom: "2.5rem" }}>
+          <p className="mt-1 mb-6 text-muted-foreground">
             Give us the details, and we'll handle the matchmaking.
           </p>
 
-          <form
-            onSubmit={handleSubmit}
-            style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}
-          >
-            {/* Title */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
             <div>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "0.85rem",
-                  fontWeight: "bold",
-                  color: "#334155",
-                  marginBottom: "0.5rem",
-                  textTransform: "uppercase",
-                }}
-              >
-                Trip Title
-              </label>
-              <input
+              <label className={fieldLabelClass}>Trip title</label>
+              <Input
                 type="text"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
                 placeholder="e.g., Backpacking the Swiss Alps"
                 required
-                style={{
-                  width: "100%",
-                  padding: "0.85rem 1rem",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "1rem",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
               />
             </div>
 
-            {/* Destination & Budget Row */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "2fr 1fr",
-                gap: "1rem",
-              }}
-            >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-[2fr_1fr]">
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#334155",
-                    marginBottom: "0.5rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Destination
-                </label>
-                <input
+                <label className={fieldLabelClass}>Destination</label>
+                <Input
                   type="text"
                   name="destination"
                   value={formData.destination}
                   onChange={handleChange}
                   placeholder="City, Country"
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "1rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
                 />
               </div>
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#334155",
-                    marginBottom: "0.5rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Est. Budget
-                </label>
-                <input
+                <label className={fieldLabelClass}>Est. budget</label>
+                <Input
                   type="number"
                   name="estimatedBudget"
                   value={formData.estimatedBudget}
                   onChange={handleChange}
                   placeholder="$ USD"
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "1rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
                 />
               </div>
             </div>
 
-            {/* Dates Row */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
-              }}
-            >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#334155",
-                    marginBottom: "0.5rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Start Date
-                </label>
-                <input
+                <label className={fieldLabelClass}>Start date</label>
+                <Input
                   type="date"
                   name="startDate"
                   value={formData.startDate}
                   onChange={handleChange}
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "1rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    color: "#334155",
-                  }}
                 />
               </div>
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#334155",
-                    marginBottom: "0.5rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  End Date
-                </label>
-                <input
+                <label className={fieldLabelClass}>End date</label>
+                <Input
                   type="date"
                   name="endDate"
                   value={formData.endDate}
                   onChange={handleChange}
                   required
-                  style={{
-                    width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "1rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    color: "#334155",
-                  }}
                 />
               </div>
             </div>
 
-            {/* Travel Style & Target Vibe */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "1rem",
-              }}
-            >
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#334155",
-                    marginBottom: "0.5rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Travel Style
-                </label>
+                <label className={fieldLabelClass}>Travel style</label>
                 <select
                   name="travelStyle"
                   value={formData.travelStyle}
                   onChange={handleChange}
-                  style={{
-                    width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    background: "white",
-                    fontSize: "1rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
+                  className={selectClass}
                 >
                   <option value="Adventure">Adventure</option>
                   <option value="Relaxation">Relaxation</option>
@@ -354,66 +161,23 @@ const CreateTrip = () => {
                 </select>
               </div>
               <div>
-                <label
-                  style={{
-                    display: "block",
-                    fontSize: "0.85rem",
-                    fontWeight: "bold",
-                    color: "#334155",
-                    marginBottom: "0.5rem",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Target Vibe
-                </label>
-                <input
+                <label className={fieldLabelClass}>Target vibe</label>
+                <Input
                   type="text"
                   name="targetVibe"
                   value={formData.targetVibe}
                   onChange={handleChange}
                   placeholder="e.g., Chill, Party, Active"
-                  style={{
-                    width: "100%",
-                    padding: "0.85rem 1rem",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    fontSize: "1rem",
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
                 />
               </div>
             </div>
 
-            <button
-              type="submit"
-              style={{
-                background: "#0284c7",
-                color: "white",
-                border: "none",
-                padding: "1rem",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                fontWeight: "bold",
-                cursor: "pointer",
-                transition: "background 0.2s",
-                marginTop: "1rem",
-              }}
-            >
-              Post Trip
-            </button>
+            <Button type="submit" className="mt-2 w-full" size="lg">
+              Post trip
+            </Button>
 
             {status && (
-              <p
-                style={{
-                  textAlign: "center",
-                  color: "#0284c7",
-                  fontWeight: "500",
-                  margin: "0",
-                }}
-              >
-                {status}
-              </p>
+              <p className="text-center font-medium text-primary">{status}</p>
             )}
           </form>
         </div>
