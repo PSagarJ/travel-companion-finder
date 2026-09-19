@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, Suspense, lazy } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -19,6 +19,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+
+const Globe = lazy(() => import("../components/Globe"));
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -318,6 +320,27 @@ const Home = () => {
             </div>
           ))}
         </div>
+      </section>
+
+      {/* GLOBE */}
+      <section className="mx-auto max-w-7xl px-5 pt-24 sm:px-8 lg:px-10">
+        <div className="mb-9 text-center">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#ff9a78]">
+            Spin the globe
+          </p>
+          <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
+            Three destinations. One planet.
+          </h2>
+        </div>
+        <Suspense
+          fallback={
+            <div className="flex h-[420px] items-center justify-center">
+              <div className="size-16 animate-pulse rounded-full bg-white/10" />
+            </div>
+          }
+        >
+          <Globe />
+        </Suspense>
       </section>
 
       {/* CURATED */}
