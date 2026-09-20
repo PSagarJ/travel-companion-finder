@@ -13,6 +13,7 @@ import matchRoutes from './src/routes/matchRoutes.js';
 import expenseRoutes from './src/routes/expenseRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
 import postRoutes from './src/routes/postRoutes.js';
+import reviewRoutes from './src/routes/reviewRoutes.js';
 import User from './src/models/User.js';
 import Trip from './src/models/TripModel.js';
 
@@ -63,6 +64,7 @@ app.use('/api/trips', tripRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/posts', postRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // --- 4. SOCKET.IO AUTHENTICATION ---
 // Runs once per connection, before any events are allowed. A socket that

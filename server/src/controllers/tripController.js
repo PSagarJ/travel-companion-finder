@@ -1,5 +1,6 @@
 import Trip from '../models/TripModel.js';
 import User from '../models/User.js';
+import { deriveTripStatus } from '../utils/tripStatus.js';
 
 // POST: Create a new trip
 export const createTrip = async (req, res) => {
@@ -18,8 +19,14 @@ export const createTrip = async (req, res) => {
 // GET all trips for the Community Board
 export const getAllTrips = async (req, res) => {
   try {
-    const trips = await Trip.find().sort({ createdAt: -1 });
-    res.status(200).json(trips);
+    const trips = await Trip.find().sort({ createdAt: -1 }).lean();
+    // Status is derived fresh on every read, not trusted from a stored
+    // value that would silently go stale as days pass.
+    const tripsWithStatus = trips.map((trip) => ({
+      ...trip,
+      status: deriveTripStatus(trip),
+    }));
+    res.status(200).json(tripsWithStatus);
   } catch (error) {
     console.error("Error fetching trips:", error);
     res.status(500).json({ message: 'Error fetching trips', error: error.message });
@@ -29,13 +36,13 @@ export const getAllTrips = async (req, res) => {
 // GET a single trip by ID
 export const getTripById = async (req, res) => {
   try {
-    const trip = await Trip.findById(req.params.id);
+    const trip = await Trip.findById(req.params.id).lean();
 
     if (!trip) {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
-    res.status(200).json(trip);
+    res.status(200).json({ ...trip, status: deriveTripStatus(trip) });
   } catch (error) {
     console.error("Error fetching single trip:", error);
     res.status(500).json({ message: 'Error fetching trip', error: error.message });
@@ -130,12 +137,42 @@ export const getUserTrips = async (req, res) => {
         { creatorId: userId },
         { "approvedMembers.userId": userId }
       ]
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).lean();
 
-    res.status(200).json(trips);
+    const tripsWithStatus = trips.map((trip) => ({
+      ...trip,
+      status: deriveTripStatus(trip),
+    }));
+
+    res.status(200).json(tripsWithStatus);
   } catch (error) {
     console.error("Error fetching user trips:", error);
     res.status(500).json({ message: 'Error fetching trips', error: error.message });
+  }
+};
+
+// PUT: Cancel a trip — the one status change that can't be derived from
+// dates, so it's stored rather than computed
+export const cancelTrip = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const trip = await Trip.findById(id);
+
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    if (trip.creatorId !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized: Only the creator can cancel this trip.' });
+    }
+
+    trip.status = 'Cancelled';
+    await trip.save();
+
+    res.status(200).json({ message: 'Trip cancelled.', trip });
+  } catch (error) {
+    console.error("Error cancelling trip:", error);
+    res.status(500).json({ message: 'Error cancelling trip', error: error.message });
   }
 };
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Compass, MapPin, CalendarDays, Users } from "lucide-react";
+import { Compass, MapPin, CalendarDays, Users, Ban } from "lucide-react";
 import api from "../api/axiosInstance";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,27 @@ const Dashboard = () => {
     }
   };
 
+  const handleCancelTrip = async (tripId) => {
+    try {
+      await api.put(`/api/trips/${tripId}/cancel`);
+      setMyTrips((prevTrips) =>
+        prevTrips.map((trip) =>
+          trip._id === tripId ? { ...trip, status: "Cancelled" } : trip,
+        ),
+      );
+    } catch (error) {
+      console.error("Error cancelling trip:", error.message);
+    }
+  };
+
+  const statusStyles = {
+    Upcoming: "bg-primary/15 text-primary",
+    Planning: "bg-primary/15 text-primary",
+    Ongoing: "bg-success/15 text-success",
+    Completed: "bg-secondary text-muted-foreground",
+    Cancelled: "bg-destructive/15 text-destructive",
+  };
+
   const hostedTrips = myTrips.filter(
     (trip) => trip.creatorId === currentUserId,
   );
@@ -97,10 +118,17 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border bg-muted/40 p-6">
           <div>
-            <h2 className="font-display text-xl font-semibold text-foreground">
-              {trip.title}
-            </h2>
-            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+            <div className="mb-1.5 flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-xl font-semibold text-foreground">
+                {trip.title}
+              </h2>
+              <Badge
+                className={statusStyles[trip.status] || statusStyles.Upcoming}
+              >
+                {trip.status || "Upcoming"}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <MapPin className="size-3.5" /> {trip.destination}
               </span>
@@ -118,6 +146,18 @@ const Dashboard = () => {
               <Users className="size-3" />
               {(trip.approvedMembers?.length || 0) + 1} in crew
             </Badge>
+            {isHost &&
+              trip.status !== "Completed" &&
+              trip.status !== "Cancelled" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => handleCancelTrip(trip._id)}
+                >
+                  <Ban className="size-3.5" /> Cancel
+                </Button>
+              )}
           </div>
         </div>
 

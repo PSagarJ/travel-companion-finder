@@ -6,6 +6,7 @@ import {
   updateApplicationStatus,
   applyForTrip,
   getUserTrips,
+  cancelTrip,
   deleteTrip
 } from '../controllers/tripController.js';
 import { protect } from '../middlewares/authMiddleware.js';
@@ -21,6 +22,7 @@ router.get('/user/:userId', getUserTrips);
 router.post('/', protect, createTrip);
 router.post('/:id/apply', protect, applyForTrip);
 router.put('/:id/status', protect, updateApplicationStatus);
+router.put('/:id/cancel', protect, cancelTrip);
 router.delete('/:id', protect, deleteTrip);
 
 export default router;

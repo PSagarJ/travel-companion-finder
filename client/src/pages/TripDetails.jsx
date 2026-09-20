@@ -9,10 +9,13 @@ import {
   Users,
   MessageCircle,
   Camera,
+  Star,
 } from "lucide-react";
 import api from "../api/axiosInstance";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 
 const TripDetails = () => {
   const { id } = useParams();
@@ -23,6 +26,17 @@ const TripDetails = () => {
   const [loadError, setLoadError] = useState(false);
   const [applyStatus, setApplyStatus] = useState("");
   const [tripPosts, setTripPosts] = useState([]);
+  const [myReviews, setMyReviews] = useState([]);
+  const [reviewDrafts, setReviewDrafts] = useState({}); // { [revieweeId]: { rating, comment } }
+  const [reviewStatus, setReviewStatus] = useState({}); // { [revieweeId]: "saving" | "saved" | "error" }
+
+  const statusStyles = {
+    Upcoming: "bg-primary/15 text-primary",
+    Planning: "bg-primary/15 text-primary",
+    Ongoing: "bg-success/15 text-success",
+    Completed: "bg-secondary text-muted-foreground",
+    Cancelled: "bg-destructive/15 text-destructive",
+  };
 
   // 💥 Determine if the user clicked the "Solo" button on the Home page
   const mode = location.state?.mode || "group";
@@ -125,7 +139,51 @@ const TripDetails = () => {
     };
   }, [id]);
 
-  // Dynamic button handler based on mode
+  useEffect(() => {
+    // Only relevant once the trip is actually over — no point fetching
+    // review state for a trip that hasn't finished yet.
+    if (!trip || trip.status !== "Completed" || !currentUserId) return;
+
+    let ignore = false;
+
+    const fetchMyReviews = async () => {
+      try {
+        const response = await api.get(`/api/reviews/trip/${id}`);
+        if (!ignore) setMyReviews(response.data);
+      } catch (error) {
+        if (!ignore)
+          console.error("Error loading review status:", error.message);
+      }
+    };
+    fetchMyReviews();
+
+    return () => {
+      ignore = true;
+    };
+  }, [trip, id, currentUserId]);
+
+  const submitReview = async (revieweeId) => {
+    const draft = reviewDrafts[revieweeId];
+    if (!draft?.rating) return;
+
+    setReviewStatus((prev) => ({ ...prev, [revieweeId]: "saving" }));
+    try {
+      const response = await api.post("/api/reviews", {
+        tripId: id,
+        revieweeId,
+        rating: draft.rating,
+        comment: draft.comment || "",
+      });
+      setMyReviews((prev) => [
+        ...prev.filter((r) => r.revieweeId !== revieweeId),
+        response.data,
+      ]);
+      setReviewStatus((prev) => ({ ...prev, [revieweeId]: "saved" }));
+    } catch (error) {
+      console.error("Error submitting review:", error.message);
+      setReviewStatus((prev) => ({ ...prev, [revieweeId]: "error" }));
+    }
+  };
   const handleAction = async () => {
     if (isSoloMode) {
       // 1. Create the text content for the downloaded file
@@ -229,10 +287,17 @@ Notes: This is your curated solo adventure. Have a great trip!
         <div className="p-6 md:p-8">
           <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
             <div>
-              <h1 className="font-display text-3xl font-semibold text-foreground">
-                {trip.title}
-              </h1>
-              <p className="mt-1.5 flex items-center gap-1.5 text-muted-foreground">
+              <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-3xl font-semibold text-foreground">
+                  {trip.title}
+                </h1>
+                <Badge
+                  className={statusStyles[trip.status] || statusStyles.Upcoming}
+                >
+                  {trip.status || "Upcoming"}
+                </Badge>
+              </div>
+              <p className="flex items-center gap-1.5 text-muted-foreground">
                 <MapPin className="size-4" /> {trip.destination}
               </p>
             </div>
@@ -352,6 +417,102 @@ Notes: This is your curated solo adventure. Have a great trip!
           </div>
         )}
       </div>
+
+      {/* Rate your crew — only once the trip is actually over, and only for members */}
+      {trip.status === "Completed" && canAccessChat && (
+        <div className="mt-8">
+          <h2 className="mb-4 font-display text-xl font-semibold text-foreground">
+            Rate your crew
+          </h2>
+          <div className="flex flex-col gap-4">
+            {[
+              ...(trip.creatorId !== currentUserId
+                ? [{ userId: trip.creatorId, name: "Trip creator" }]
+                : []),
+              ...(trip.approvedMembers || []).filter(
+                (m) => m.userId !== currentUserId,
+              ),
+            ].map((member) => {
+              const existing = myReviews.find(
+                (r) => r.revieweeId === member.userId,
+              );
+              const draft = reviewDrafts[member.userId] || {
+                rating: existing?.rating || 0,
+                comment: existing?.comment || "",
+              };
+              const status = reviewStatus[member.userId];
+
+              return (
+                <Card key={member.userId} className="p-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="font-semibold text-foreground">
+                      {member.name}
+                    </p>
+                    {existing && (
+                      <span className="text-xs font-semibold text-success">
+                        ✓ Reviewed
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mb-3 flex gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() =>
+                          setReviewDrafts((prev) => ({
+                            ...prev,
+                            [member.userId]: { ...draft, rating: star },
+                          }))
+                        }
+                      >
+                        <Star
+                          className={`size-6 ${
+                            star <= draft.rating
+                              ? "fill-accent text-accent"
+                              : "text-muted-foreground"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+
+                  <Textarea
+                    placeholder="How was traveling with them? (optional)"
+                    value={draft.comment}
+                    onChange={(e) =>
+                      setReviewDrafts((prev) => ({
+                        ...prev,
+                        [member.userId]: { ...draft, comment: e.target.value },
+                      }))
+                    }
+                    rows={2}
+                  />
+
+                  <Button
+                    size="sm"
+                    className="mt-3"
+                    disabled={!draft.rating || status === "saving"}
+                    onClick={() => submitReview(member.userId)}
+                  >
+                    {status === "saving"
+                      ? "Saving..."
+                      : existing
+                        ? "Update review"
+                        : "Submit review"}
+                  </Button>
+                  {status === "error" && (
+                    <p className="mt-2 text-sm text-destructive">
+                      Something went wrong. Try again.
+                    </p>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

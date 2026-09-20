@@ -39,8 +39,12 @@ const tripSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['Planning', 'Ongoing', 'Completed'],
-      default: 'Planning',
+      // 'Planning' kept for backward compatibility with any trips already
+      // saved under the old enum — new trips default to 'Upcoming' instead.
+      // 'Ongoing'/'Completed' are normally derived from dates automatically
+      // (see utils/tripStatus.js); 'Cancelled' is the one manual override.
+      enum: ['Planning', 'Upcoming', 'Ongoing', 'Completed', 'Cancelled'],
+      default: 'Upcoming',
     }
   },
   {
