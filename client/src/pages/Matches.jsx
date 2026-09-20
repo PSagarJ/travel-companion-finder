@@ -133,8 +133,14 @@ const Matches = () => {
           No matches found yet
         </h2>
         <p className="mt-2 text-muted-foreground">
-          Check back once more travelers join, or update your travel style in
-          your profile.
+          Check back once more travelers join, or{" "}
+          <Link
+            to="/profile/edit"
+            className="font-semibold text-primary hover:underline"
+          >
+            update your travel profile
+          </Link>
+          .
         </p>
       </div>
     );
@@ -147,8 +153,15 @@ const Matches = () => {
           Your travel matches
         </h1>
         <p className="mt-2 text-lg text-muted-foreground">
-          We found these explorers based on your travel style and budget.
+          We found these explorers based on your travel style, destinations, and
+          interests.
         </p>
+        <Link
+          to="/profile/edit"
+          className="mt-2 inline-block text-sm font-semibold text-primary hover:underline"
+        >
+          Edit your travel profile →
+        </Link>
       </div>
 
       <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-7">
@@ -208,11 +221,40 @@ const Matches = () => {
                   )}
                 </div>
 
-                {/* Shared destinations */}
-                <p className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="size-4" />
-                  {match.sharedDestinations?.join(", ") || "Ready to explore"}
-                </p>
+                {/* Why this match — factor breakdown */}
+                {match.breakdown && (
+                  <div className="mb-6 flex flex-col gap-1.5 rounded-xl bg-secondary/50 p-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">
+                        {match.breakdown.travelStyle.label}
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {match.breakdown.travelStyle.score}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        <MapPin className="size-3.5" />
+                        {match.breakdown.destinations.sharedCount > 0
+                          ? `${match.breakdown.destinations.sharedCount} shared destination${match.breakdown.destinations.sharedCount > 1 ? "s" : ""}`
+                          : "No shared destinations yet"}
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {match.breakdown.destinations.score}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">
+                        {match.breakdown.interests.sharedCount > 0
+                          ? `${match.breakdown.interests.sharedCount} shared interest${match.breakdown.interests.sharedCount > 1 ? "s" : ""}`
+                          : "No shared interests yet"}
+                      </span>
+                      <span className="font-semibold text-foreground">
+                        {match.breakdown.interests.score}%
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <Button asChild className="mt-auto w-full">
                   <Link to={`/profile/${match.user?._id}`}>

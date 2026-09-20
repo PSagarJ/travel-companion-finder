@@ -12,6 +12,7 @@ import Matches from "./pages/Matches";
 import Login from "./pages/Login";
 import Feed from "./pages/Feed";
 import DestinationDetail from "./pages/DestinationDetail";
+import EditProfile from "./pages/EditProfile";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
         <Route path="/create-trip" element={<CreateTrip />} />
         <Route path="/destination/:id" element={<TripDetails />} />
         <Route path="/explore/:id" element={<DestinationDetail />} />
+        <Route path="/profile/edit" element={<EditProfile />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/chat/:tripId" element={<ChatRoom />} />
         <Route path="/login" element={<Login />} />

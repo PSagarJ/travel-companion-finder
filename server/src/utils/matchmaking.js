@@ -18,3 +18,18 @@ export const calculateCosineSimilarity = (userVector, targetVector) => {
   
   return dotProd / (magA * magB);
 };
+
+// Measures overlap between two lists (e.g. preferred destinations, vibe
+// badges) as intersection-over-union, bounded 0–1. Two people who've each
+// listed nothing in common get 0, not a false-positive full score.
+export const jaccardSimilarity = (listA = [], listB = []) => {
+  if (listA.length === 0 || listB.length === 0) return 0;
+
+  const setA = new Set(listA.map((item) => item.toLowerCase().trim()));
+  const setB = new Set(listB.map((item) => item.toLowerCase().trim()));
+
+  const intersectionSize = [...setA].filter((item) => setB.has(item)).length;
+  const unionSize = new Set([...setA, ...setB]).size;
+
+  return unionSize === 0 ? 0 : intersectionSize / unionSize;
+};

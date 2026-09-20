@@ -9,6 +9,8 @@ import {
   PlusCircle,
   Images,
   ArrowUpRight,
+  Users,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,6 +68,16 @@ const Navbar = () => {
             to: "/dashboard",
             label: "Dashboard",
             icon: LayoutDashboard,
+          },
+          {
+            to: "/matches",
+            label: "Matches",
+            icon: Users,
+          },
+          {
+            to: "/profile/edit",
+            label: "Travel Profile",
+            icon: UserCog,
           },
         ]
       : []),

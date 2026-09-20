@@ -13,7 +13,6 @@ import matchRoutes from './src/routes/matchRoutes.js';
 import expenseRoutes from './src/routes/expenseRoutes.js';
 import authRoutes from './src/routes/authRoutes.js';
 import postRoutes from './src/routes/postRoutes.js';
-import router from './src/routes/userRoutes.js';
 import User from './src/models/User.js';
 import Trip from './src/models/TripModel.js';
 

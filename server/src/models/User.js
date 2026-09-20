@@ -36,6 +36,14 @@ const userSchema = new mongoose.Schema(
       {
         type: String, 
       }
+    ],
+    // Places this user wants to go or has enjoyed — powers the
+    // destination-overlap factor in the matching algorithm, and is what
+    // Matches.jsx's "shared destinations" display was always missing data for.
+    preferredDestinations: [
+      {
+        type: String,
+      }
     ]
   },
   {
