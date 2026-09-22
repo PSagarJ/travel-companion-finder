@@ -1,89 +1,105 @@
 # Backend Schema — TravelBuddy
 
-Tables (Mongoose collections), relationships, and auth logic. This describes structure only — no real data, credentials, or connection strings.
-
-> ⚠️ Field names/types below are inferred from the app's described features and API surface. Verify against your actual Mongoose model files before treating this as ground truth, and adjust field names to match exactly if you publish this.
+Tables (Mongoose collections), relationships, and auth logic — verified directly against the actual model files.
 
 ## 1. Collections overview
 
 ```
-User ──┬──< Trip (creator)
-       ├──< Trip (applicant/member, via Trip.applicants / Trip.members)
-       ├──< Review (as reviewer)
-       ├──< Review (as reviewee)
-       ├──< Post
-       └──< Expense (as payer/participant)
+User ──┬──< Trip (creatorId)
+       ├──< Trip.applicants (userId, cached name/travelStyle/matchScore)
+       ├──< Trip.approvedMembers (userId, cached name)
+       ├──< Review (as reviewerId / revieweeId)
+       ├──< Post (userId)
+       └──< Expense (paidBy)
 
-Trip ──┬──< Review (scoped to a trip)
-       ├──< Post (optionally tagged to a trip)
-       └──< Expense (scoped to a trip)
+Trip ──┬──< Review (tripId)
+       ├──< Post (optional tripId)
+       └──< Expense (tripId)
 ```
+
+**Note on relationships:** most cross-references (`creatorId`, `userId`, `paidBy`, `reviewerId`, etc.) are stored as plain `String`, not as Mongoose `ObjectId` refs with `populate()`. `Expense.tripId` is the one exception — it's a real `ObjectId` ref to `Trip`. Several documents also cache a denormalized display name (`payerName`, `userName`, `reviewerName`, applicant `name`) alongside the ID, likely to avoid extra lookups on the frontend.
 
 ## 2. `User`
 
 | Field | Type | Notes |
 |---|---|---|
 | `_id` | ObjectId | primary key |
-| `name` | String | |
-| `email` | String | unique, used for login |
-| `password` | String | bcrypt hash — never plaintext |
-| `travelStyle` | String / Enum | used in matching |
-| `interests` | [String] | used in matching (Jaccard similarity) |
-| `destinationWishlist` | [String] | used in matching (Jaccard similarity) |
-| `avatarUrl` | String | Cloudinary URL, optional |
-| `rating` | Number (avg) | aggregated from `Review` documents |
-| `createdAt` / `updatedAt` | Date | timestamps |
+| `name` | String | required, trimmed |
+| `email` | String | required, unique, lowercased + trimmed automatically |
+| `password` | String | required — bcrypt hash, never plaintext |
+| `isGovIdVerified` | Boolean | default `false` — trust & safety verification flag |
+| `govIdUrl` | String | uploaded ID document URL |
+| `travelStyle` | String enum | `Backpacker`, `Luxury`, `Budget`, `Adventure`, `Chill` — default `Chill` |
+| `vibeBadges` | [String] | gamification badges |
+| `preferredDestinations` | [String] | destinations the user wants to go / has enjoyed — powers destination-overlap in matching |
+| `createdAt` / `updatedAt` | Date | automatic timestamps |
 
-## 3. `Trip`
+> Note: there is no separate `interests` field — `vibeBadges` and `preferredDestinations` are the closest equivalents in the actual schema.
+
+## 3. `Trip` (`TripModel.js`)
 
 | Field | Type | Notes |
 |---|---|---|
 | `_id` | ObjectId | primary key |
-| `creator` | ObjectId → `User` | trip owner |
-| `destination` | String | |
-| `description` | String | |
-| `startDate` / `endDate` | Date | used to auto-derive status |
-| `status` | Enum: Upcoming / Ongoing / Completed / Cancelled | computed from dates on read; `Cancelled` is the sole manual, creator-only override |
-| `applicants` | [ObjectId → `User`] | users who requested to join, pending decision |
-| `members` | [ObjectId → `User`] | approved trip members (gain chat + expense access) |
-| `createdAt` / `updatedAt` | Date | timestamps |
+| `title` | String | required |
+| `destination` | String | required |
+| `startDate` | String | required — stored as a plain string, not a `Date`, to avoid date-input formatting issues |
+| `endDate` | String | required, same as above |
+| `estimatedBudget` | Number | required |
+| `travelStyle` | String | required |
+| `targetVibe` | String | required |
+| `creatorId` | String | required — references a `User._id` as a string, not a Mongoose ref |
+| `applicants` | [Object] | each entry: `userId`, `status` (`pending`/`approved`/`rejected`), plus cached `name`, `travelStyle`, `matchScore` |
+| `approvedMembers` | [Object] | each entry: `userId`, cached `name` |
+| `status` | String enum | `Planning` (legacy value, kept for old records), `Upcoming`, `Ongoing`, `Completed`, `Cancelled` — default `Upcoming` |
+| `createdAt` / `updatedAt` | Date | automatic timestamps |
+
+**Status logic:** `Ongoing`/`Completed` are derived automatically from `startDate`/`endDate` (see `utils/tripStatus.js`); `Cancelled` is the one manual, creator-only override. `Planning` is a legacy enum value retained only for trips saved before the status logic changed — new trips default straight to `Upcoming`.
+
+> Note: there is no `description` field on `Trip` — the closest fields are `targetVibe` and `travelStyle`.
 
 ## 4. `Review`
 
 | Field | Type | Notes |
 |---|---|---|
 | `_id` | ObjectId | primary key |
-| `trip` | ObjectId → `Trip` | which trip this review is scoped to |
-| `reviewer` | ObjectId → `User` | who wrote it |
-| `reviewee` | ObjectId → `User` | who it's about |
-| `rating` | Number | e.g. 1–5 |
-| `comment` | String | |
-| `createdAt` | Date | server checks `Trip.status === Completed` before allowing creation |
+| `tripId` | String | required |
+| `reviewerId` | String | required — who wrote the review |
+| `reviewerName` | String | cached display name |
+| `revieweeId` | String | required — who the review is about |
+| `revieweeName` | String | cached display name |
+| `rating` | Number | required, 1–5 |
+| `comment` | String | trimmed, max 500 characters |
+| `createdAt` / `updatedAt` | Date | automatic timestamps |
+
+**Uniqueness constraint:** a compound unique index on `(tripId, reviewerId, revieweeId)` — resubmitting a review for the same person on the same trip updates the existing review rather than creating a duplicate.
 
 ## 5. `Post` (travel memories feed)
 
 | Field | Type | Notes |
 |---|---|---|
 | `_id` | ObjectId | primary key |
-| `user` | ObjectId → `User` | author |
-| `trip` | ObjectId → `Trip` | optional tag |
-| `imageUrl` | String | Cloudinary URL (EXIF/GPS stripped before upload) |
-| `caption` | String | optional |
-| `createdAt` | Date | |
+| `userId` | String | required |
+| `userName` | String | cached display name |
+| `imageUrl` | String | required — Cloudinary URL |
+| `caption` | String | trimmed, max 500 characters |
+| `tripId` | String | optional — links the memory back to a trip |
+| `destination` | String | trimmed, optional |
+| `createdAt` / `updatedAt` | Date | automatic timestamps |
 
 ## 6. `Expense`
 
 | Field | Type | Notes |
 |---|---|---|
 | `_id` | ObjectId | primary key |
-| `trip` | ObjectId → `Trip` | scoped to one trip; access requires membership |
-| `paidBy` | ObjectId → `User` | who fronted the cost |
-| `amount` | Number | |
-| `description` | String | |
-| `splitAmong` | [ObjectId → `User`] | participants sharing this cost |
-| `createdAt` | Date | |
+| `tripId` | ObjectId → `Trip` | required — the one real Mongoose `ref` in the schema |
+| `description` | String | required, trimmed |
+| `amount` | Number | required |
+| `paidBy` | String | required — user ID string |
+| `payerName` | String | required — cached display name |
+| `createdAt` / `updatedAt` | Date | automatic timestamps |
 
-**Settlement Minimization Engine** (application logic, not a stored table): on request, reads all `Expense` documents for a trip, computes each member's net balance (paid − owed), and outputs the minimum number of payments required to bring every balance to zero — rather than a naive "everyone pays everyone" split.
+**Splitting logic:** there is no `splitAmong` field — costs are split **evenly across all approved trip members**, not per-expense-customizable. The **Settlement Minimization Engine** (application logic, not a stored table) reads all `Expense` documents for a trip, computes each member's net balance against an equal per-person share, and outputs the minimum number of payments required to bring every balance to zero.
 
 ## 7. Auth logic
 
@@ -94,6 +110,7 @@ Trip ──┬──< Review (scoped to a trip)
 
 ## 8. Relationship integrity notes
 
-- A user only gains access to a `Trip`'s chat and expenses after moving from `applicants` to `members` (creator approval).
-- `Review` creation is gated on the related `Trip.status` being `Completed`, verified server-side (not trusted from the client).
-- `Trip.status` is a derived/computed value on read wherever possible, rather than a field that can drift out of sync with `startDate`/`endDate` — except for `Cancelled`, which is the one true manual state.
+- A user only gains access to a `Trip`'s chat and expenses after moving from `applicants` to `approvedMembers` (creator approval).
+- `Review` creation is gated on the related `Trip.status` being `Completed`, verified server-side.
+- `Trip.status` is a derived/computed value on read wherever possible (`Ongoing`/`Completed`), rather than a field that can drift out of sync with `startDate`/`endDate` — `Cancelled` is the one true manual state, and `Planning` only ever appears on legacy records.
+- Most relationships are enforced at the application layer (matching string IDs) rather than via Mongoose's built-in `ref`/`populate()` — `Expense.tripId` is the sole exception.
