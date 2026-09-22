@@ -47,7 +47,7 @@ Planning a group trip usually means five different apps: one to find people, one
 
 ### 💬 Real-Time Collaboration
 - Trip-specific chat over authenticated, membership-verified Socket.io rooms
-- Shared expense ledger syncs live across every device on the trip
+- Shared expense ledger syncs live across every device on the trip; costs split evenly across all trip members
 - **Settlement Minimization Engine** — computes the fewest possible payments to settle group balances
 
 ### ⭐ Reviews & Reputation
@@ -67,6 +67,41 @@ Planning a group trip usually means five different apps: one to find people, one
 
 ### 🌍 Interactive Home Page
 A rotating 3D globe (`react-three-fiber` + `three.js`) with clickable pins linking straight into each destination page, Framer Motion entrance animations, and a custom "sunset teal → coral" palette (oklch color space) with Fraunces/Inter typography.
+
+---
+
+## 📸 Screenshots
+
+<table>
+<tr>
+<td width="50%">
+
+**Home**
+![Home](docs/screenshots/home.png)
+
+</td>
+<td width="50%">
+
+**Dashboard**
+![Dashboard](docs/screenshots/dashboard.png)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Trip Discovery**
+![Trip Details](docs/screenshots/trip-details.png)
+
+</td>
+<td width="50%">
+
+**Trip Ledger (Expense Settlement)**
+![Expense Tracker](docs/screenshots/expense-tracker.png)
+
+</td>
+</tr>
+</table>
 
 ---
 
@@ -269,4 +304,3 @@ npm run dev
 ## 👤 Author
 
 **Sagar** — built as a full-stack MERN project.
-
