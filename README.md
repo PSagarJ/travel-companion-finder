@@ -270,6 +270,3 @@ npm run dev
 
 **Sagar** — built as a full-stack MERN project.
 
-## 📄 License
-
-No license specified yet. Add one (e.g. MIT) if you intend this repository to be fully open source.
