@@ -2,6 +2,8 @@ import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import http from 'http'; 
 import { Server } from 'socket.io'; 
 import jwt from 'jsonwebtoken';
@@ -22,7 +24,6 @@ dotenv.config();
 const app = express();
 
 // Origins allowed to call this API — local dev plus the deployed frontend.
-// Add CLIENT_URL as an env var on Render if you ever change/add a frontend domain.
 const allowedOrigins = [
   "http://localhost:5173",
   "https://travel-companion-finder-frontend.onrender.com",
@@ -31,18 +32,39 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. curl, server-to-server) and known origins
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
     }
   },
+  credentials: true,
 };
 
+// Rate Limiters
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30, // 30 requests per 15 min per IP
+  message: { message: 'Too many authentication attempts. Please try again in 15 minutes.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300, // 300 requests per 15 min
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // --- 1. GLOBAL MIDDLEWARES ---
-app.use(express.json()); // Essential for reading req.body
-app.use(cors(corsOptions)); // Essential for cross-origin frontend requests
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+app.use(express.json({ limit: '1mb' }));
+app.use(cors(corsOptions));
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
 
 // --- 2. WRAP EXPRESS WITH HTTP SERVER FOR SOCKET.IO ---
 const server = http.createServer(app);
@@ -53,8 +75,6 @@ const io = new Server(server, {
   }
 });
 
-// Lets controllers (e.g. expenseController) broadcast real-time updates
-// to everyone currently viewing a trip, via req.app.get('io').
 app.set('io', io);
 
 // --- 3. API ROUTES ---
@@ -66,9 +86,24 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/reviews', reviewRoutes);
 
-// --- 4. SOCKET.IO AUTHENTICATION ---
-// Runs once per connection, before any events are allowed. A socket that
-// fails this never gets to call join_trip_room or send_message at all.
+// --- 4. GLOBAL ERROR HANDLER ---
+app.use((err, req, res, next) => {
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ message: 'CORS forbidden: origin not allowed.' });
+  }
+  if (err.name === 'MulterError') {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File is too large. Max limit is 5MB.' });
+    }
+    return res.status(400).json({ message: `Upload error: ${err.message}` });
+  }
+  console.error('Unhandled server error:', err.message);
+  res.status(err.status || 500).json({
+    message: err.message && process.env.NODE_ENV !== 'production' ? err.message : 'Internal server error',
+  });
+});
+
+// --- 5. SOCKET.IO AUTHENTICATION ---
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
@@ -78,8 +113,6 @@ io.use(async (socket, next) => {
     const user = await User.findById(decoded.id).select('name');
     if (!user) return next(new Error('User not found'));
 
-    // Attach a verified identity to this socket — every handler below
-    // trusts socket.user, never anything the client sends in message data.
     socket.user = { id: decoded.id, name: user.name };
     next();
   } catch (error) {
@@ -87,12 +120,16 @@ io.use(async (socket, next) => {
   }
 });
 
-// --- 5. SOCKET.IO CHAT LOGIC ---
+// --- 6. SOCKET.IO CHAT LOGIC ---
 io.on('connection', (socket) => {
   console.log(`🔌 ${socket.user.name} connected: ${socket.id}`);
 
   socket.on('join_trip_room', async (tripId) => {
     try {
+      if (!mongoose.Types.ObjectId.isValid(tripId)) {
+        return socket.emit('chat_error', 'Invalid trip ID format.');
+      }
+
       const trip = await Trip.findById(tripId);
       if (!trip) {
         return socket.emit('chat_error', 'Trip not found.');
@@ -114,11 +151,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_message', (messageData) => {
-    // sender identity always comes from the verified socket, never the client payload —
-    // otherwise anyone could impersonate another crew member in chat.
+    if (!messageData || !messageData.tripId || !messageData.text) return;
+
+    // Security check: Verify socket has actually joined this trip's room
+    if (!socket.rooms.has(messageData.tripId)) {
+      return socket.emit('chat_error', 'You must join the trip room before sending messages.');
+    }
+
+    const trimmedText = String(messageData.text).trim();
+    if (trimmedText.length === 0 || trimmedText.length > 2000) return;
+
     const safeMessage = {
       tripId: messageData.tripId,
-      text: messageData.text,
+      text: trimmedText,
       sender: socket.user.name,
       senderId: socket.user.id,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -131,7 +176,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// --- 5. DATABASE & SERVER BOOTUP ---
+// --- 7. DATABASE & SERVER BOOTUP ---
 const PORT = process.env.PORT || 5000;
 
 mongoose.connect(process.env.MONGO_URI)

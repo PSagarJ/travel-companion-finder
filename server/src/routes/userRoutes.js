@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import User from '../models/User.js';
 import { protect } from '../middlewares/authMiddleware.js';
 
@@ -7,6 +8,10 @@ const router = express.Router();
 // GET: Fetch a single user's public profile
 router.get('/:id', async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid user ID format' });
+    }
+
     // We use .select('-password') to ensure we NEVER send the password hash to the frontend
     const user = await User.findById(req.params.id).select('-password');
     if (!user) {
@@ -14,7 +19,8 @@ router.get('/:id', async (req, res) => {
     }
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching user profile', error: error.message });
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ message: 'Error fetching user profile' });
   }
 });
 
@@ -61,7 +67,8 @@ router.put('/me', protect, async (req, res) => {
 
     res.status(200).json(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating profile', error: error.message });
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Error updating profile' });
   }
 });
 

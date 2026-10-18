@@ -1,18 +1,64 @@
+import mongoose from 'mongoose';
 import Trip from '../models/TripModel.js';
 import User from '../models/User.js';
 import { deriveTripStatus } from '../utils/tripStatus.js';
 
-// POST: Create a new trip
+// POST: Create a new trip (whitelisted fields to prevent mass assignment)
 export const createTrip = async (req, res) => {
   try {
-    // The creator is whoever is authenticated, not whatever the client claims
-    const newTrip = new Trip({ ...req.body, creatorId: req.user.id });
-    const savedTrip = await newTrip.save();
+    const {
+      title,
+      destination,
+      startDate,
+      endDate,
+      estimatedBudget,
+      travelStyle,
+      targetVibe,
+    } = req.body;
 
+    if (!title || typeof title !== 'string' || title.trim().length < 3 || title.trim().length > 100) {
+      return res.status(400).json({ message: 'Trip title must be between 3 and 100 characters.' });
+    }
+
+    if (!destination || typeof destination !== 'string' || destination.trim().length < 2 || destination.trim().length > 100) {
+      return res.status(400).json({ message: 'Destination must be between 2 and 100 characters.' });
+    }
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: 'Start date and end date are required.' });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && end < start) {
+      return res.status(400).json({ message: 'End date cannot be earlier than start date.' });
+    }
+
+    const parsedBudget = Number(estimatedBudget);
+    if (isNaN(parsedBudget) || parsedBudget < 0) {
+      return res.status(400).json({ message: 'Estimated budget must be a positive number.' });
+    }
+
+    // Whitelist explicitly — client cannot inject applicants, approvedMembers, or status
+    const newTrip = new Trip({
+      title: title.trim(),
+      destination: destination.trim(),
+      startDate: String(startDate),
+      endDate: String(endDate),
+      estimatedBudget: parsedBudget,
+      travelStyle: typeof travelStyle === 'string' ? travelStyle.trim() : 'Chill',
+      targetVibe: typeof targetVibe === 'string' ? targetVibe.trim() : 'Relaxed',
+      creatorId: req.user.id,
+      applicants: [],
+      approvedMembers: [],
+      status: 'Upcoming',
+    });
+
+    const savedTrip = await newTrip.save();
     res.status(201).json(savedTrip);
   } catch (error) {
-    console.error("Error creating trip:", error.message);
-    res.status(500).json({ message: 'Error creating trip', error: error.message });
+    console.error("Error creating trip:", error);
+    res.status(500).json({ message: 'Error creating trip' });
   }
 };
 
@@ -29,13 +75,17 @@ export const getAllTrips = async (req, res) => {
     res.status(200).json(tripsWithStatus);
   } catch (error) {
     console.error("Error fetching trips:", error);
-    res.status(500).json({ message: 'Error fetching trips', error: error.message });
+    res.status(500).json({ message: 'Error fetching trips' });
   }
 };
 
 // GET a single trip by ID
 export const getTripById = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid trip ID format' });
+    }
+
     const trip = await Trip.findById(req.params.id).lean();
 
     if (!trip) {
@@ -45,7 +95,7 @@ export const getTripById = async (req, res) => {
     res.status(200).json({ ...trip, status: deriveTripStatus(trip) });
   } catch (error) {
     console.error("Error fetching single trip:", error);
-    res.status(500).json({ message: 'Error fetching trip', error: error.message });
+    res.status(500).json({ message: 'Error fetching trip' });
   }
 };
 
@@ -55,9 +105,24 @@ export const applyForTrip = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id; // from verified token, not req.body
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid trip ID format' });
+    }
+
     const trip = await Trip.findById(id);
     if (!trip) {
       return res.status(404).json({ message: 'Trip not found' });
+    }
+
+    // Edge case: Creator cannot apply to their own trip
+    if (trip.creatorId === userId) {
+      return res.status(400).json({ message: 'You are the creator of this trip and cannot apply as an applicant.' });
+    }
+
+    // Edge case: Already an approved member
+    const alreadyApproved = trip.approvedMembers?.some(m => m.userId === userId);
+    if (alreadyApproved) {
+      return res.status(400).json({ message: 'You are already an approved member of this trip!' });
     }
 
     const alreadyApplied = trip.applicants.some(app => app.userId === userId);
@@ -80,7 +145,7 @@ export const applyForTrip = async (req, res) => {
     res.status(200).json({ message: 'Application successful!', trip });
   } catch (error) {
     console.error("Error applying for trip:", error);
-    res.status(500).json({ message: 'Error applying for trip', error: error.message });
+    res.status(500).json({ message: 'Error applying for trip' });
   }
 };
 
@@ -88,7 +153,15 @@ export const applyForTrip = async (req, res) => {
 export const updateApplicationStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { userId, status } = req.body; // userId here = the applicant being approved/rejected, not the caller
+    const { userId, status } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid trip ID format' });
+    }
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be approved or rejected.' });
+    }
 
     const trip = await Trip.findById(id);
     if (!trip) {
@@ -123,7 +196,7 @@ export const updateApplicationStatus = async (req, res) => {
     res.status(200).json({ message: `Applicant successfully ${status}!`, trip });
   } catch (error) {
     console.error("Error updating status:", error);
-    res.status(500).json({ message: 'Error updating application status', error: error.message });
+    res.status(500).json({ message: 'Error updating application status' });
   }
 };
 
@@ -147,15 +220,18 @@ export const getUserTrips = async (req, res) => {
     res.status(200).json(tripsWithStatus);
   } catch (error) {
     console.error("Error fetching user trips:", error);
-    res.status(500).json({ message: 'Error fetching trips', error: error.message });
+    res.status(500).json({ message: 'Error fetching trips' });
   }
 };
 
-// PUT: Cancel a trip — the one status change that can't be derived from
-// dates, so it's stored rather than computed
+// PUT: Cancel a trip
 export const cancelTrip = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid trip ID format' });
+    }
+
     const trip = await Trip.findById(id);
 
     if (!trip) {
@@ -172,7 +248,7 @@ export const cancelTrip = async (req, res) => {
     res.status(200).json({ message: 'Trip cancelled.', trip });
   } catch (error) {
     console.error("Error cancelling trip:", error);
-    res.status(500).json({ message: 'Error cancelling trip', error: error.message });
+    res.status(500).json({ message: 'Error cancelling trip' });
   }
 };
 
@@ -180,13 +256,16 @@ export const cancelTrip = async (req, res) => {
 export const deleteTrip = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid trip ID format' });
+    }
 
     const trip = await Trip.findById(id);
     if (!trip) {
       return res.status(404).json({ message: 'Trip not found' });
     }
 
-    // Only the verified, authenticated creator can delete — not whoever the client claims to be
+    // Only the verified, authenticated creator can delete
     if (trip.creatorId !== req.user.id) {
       return res.status(403).json({ message: 'Unauthorized: Only the creator can delete this trip listing.' });
     }
@@ -195,6 +274,6 @@ export const deleteTrip = async (req, res) => {
     res.status(200).json({ message: 'Trip successfully removed from the platform!' });
   } catch (error) {
     console.error("Error deleting trip document:", error);
-    res.status(500).json({ message: 'Error deleting trip', error: error.message });
+    res.status(500).json({ message: 'Error deleting trip' });
   }
 };

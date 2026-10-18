@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import streamifier from 'streamifier';
 import Post from '../models/Post.js';
 import User from '../models/User.js';
@@ -26,24 +27,27 @@ export const createPost = async (req, res) => {
 
     const { caption, tripId, destination } = req.body;
 
+    const safeCaption = typeof caption === 'string' ? caption.trim().slice(0, 500) : '';
+    const safeDestination = typeof destination === 'string' ? destination.trim().slice(0, 100) : '';
+
     const result = await uploadBufferToCloudinary(req.file.buffer);
 
     const user = await User.findById(req.user.id);
 
     const newPost = new Post({
-      userId: req.user.id, // from the verified token, never the client
+      userId: req.user.id, // from verified token
       userName: user ? user.name : 'Explorer',
       imageUrl: result.secure_url,
-      caption,
-      tripId,
-      destination,
+      caption: safeCaption,
+      tripId: typeof tripId === 'string' ? tripId.trim() : undefined,
+      destination: safeDestination,
     });
 
     const savedPost = await newPost.save();
     res.status(201).json(savedPost);
   } catch (error) {
     console.error('Error creating post:', error);
-    res.status(500).json({ message: 'Error creating post', error: error.message });
+    res.status(500).json({ message: 'Error creating post' });
   }
 };
 
@@ -54,7 +58,7 @@ export const getAllPosts = async (req, res) => {
     res.status(200).json(posts);
   } catch (error) {
     console.error('Error fetching posts:', error);
-    res.status(500).json({ message: 'Error fetching posts', error: error.message });
+    res.status(500).json({ message: 'Error fetching posts' });
   }
 };
 
@@ -66,7 +70,7 @@ export const getUserPosts = async (req, res) => {
     res.status(200).json(posts);
   } catch (error) {
     console.error('Error fetching user posts:', error);
-    res.status(500).json({ message: 'Error fetching user posts', error: error.message });
+    res.status(500).json({ message: 'Error fetching user posts' });
   }
 };
 
@@ -78,7 +82,7 @@ export const getTripPosts = async (req, res) => {
     res.status(200).json(posts);
   } catch (error) {
     console.error('Error fetching trip posts:', error);
-    res.status(500).json({ message: 'Error fetching trip posts', error: error.message });
+    res.status(500).json({ message: 'Error fetching trip posts' });
   }
 };
 
@@ -86,6 +90,11 @@ export const getTripPosts = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid post ID format' });
+    }
+
     const post = await Post.findById(id);
 
     if (!post) {
@@ -100,6 +109,6 @@ export const deletePost = async (req, res) => {
     res.status(200).json({ message: 'Post deleted successfully' });
   } catch (error) {
     console.error('Error deleting post:', error);
-    res.status(500).json({ message: 'Error deleting post', error: error.message });
+    res.status(500).json({ message: 'Error deleting post' });
   }
 };

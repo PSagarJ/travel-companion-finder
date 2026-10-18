@@ -1,10 +1,11 @@
+import mongoose from 'mongoose';
 import Review from '../models/Review.js';
 import Trip from '../models/TripModel.js';
 import User from '../models/User.js';
 import { deriveTripStatus } from '../utils/tripStatus.js';
 
 const isTripMember = (trip, userId) =>
-  trip.creatorId === userId || trip.approvedMembers.some((m) => m.userId === userId);
+  trip.creatorId === userId || trip.approvedMembers?.some((m) => m.userId === userId);
 
 // POST: Submit (or update) a review for a fellow trip member. Only allowed
 // once the trip has actually completed, and only between two people who
@@ -17,14 +18,21 @@ export const createReview = async (req, res) => {
     if (!tripId || !revieweeId || rating === undefined) {
       return res.status(400).json({ message: 'tripId, revieweeId, and rating are required.' });
     }
+
+    if (!mongoose.Types.ObjectId.isValid(tripId) || !mongoose.Types.ObjectId.isValid(revieweeId)) {
+      return res.status(400).json({ message: 'Invalid trip or user ID format.' });
+    }
+
     if (reviewerId === revieweeId) {
       return res.status(400).json({ message: "You can't review yourself." });
     }
 
-    const parsedRating = Number(rating);
+    const parsedRating = Math.round(Number(rating));
     if (isNaN(parsedRating) || parsedRating < 1 || parsedRating > 5) {
-      return res.status(400).json({ message: 'Rating must be between 1 and 5.' });
+      return res.status(400).json({ message: 'Rating must be an integer between 1 and 5.' });
     }
+
+    const safeComment = typeof comment === 'string' ? comment.trim().slice(0, 500) : '';
 
     const trip = await Trip.findById(tripId);
     if (!trip) return res.status(404).json({ message: 'Trip not found' });
@@ -56,7 +64,7 @@ export const createReview = async (req, res) => {
         revieweeId,
         revieweeName: revieweeUser ? revieweeUser.name : 'Traveler',
         rating: parsedRating,
-        comment,
+        comment: safeComment,
       },
       { upsert: true, new: true, runValidators: true },
     );
@@ -64,7 +72,7 @@ export const createReview = async (req, res) => {
     res.status(201).json(review);
   } catch (error) {
     console.error('Error creating review:', error);
-    res.status(500).json({ message: 'Error saving review', error: error.message });
+    res.status(500).json({ message: 'Error saving review' });
   }
 };
 
@@ -73,6 +81,11 @@ export const createReview = async (req, res) => {
 export const getUserReviews = async (req, res) => {
   try {
     const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: 'Invalid user ID format.' });
+    }
+
     const reviews = await Review.find({ revieweeId: userId }).sort({ createdAt: -1 });
 
     const averageRating =
@@ -86,7 +99,8 @@ export const getUserReviews = async (req, res) => {
       reviewCount: reviews.length,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching reviews', error: error.message });
+    console.error('Error fetching reviews:', error);
+    res.status(500).json({ message: 'Error fetching reviews' });
   }
 };
 
@@ -95,9 +109,15 @@ export const getUserReviews = async (req, res) => {
 export const getMyReviewsForTrip = async (req, res) => {
   try {
     const { tripId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(tripId)) {
+      return res.status(400).json({ message: 'Invalid trip ID format.' });
+    }
+
     const reviews = await Review.find({ tripId, reviewerId: req.user.id });
     res.status(200).json(reviews);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching trip reviews', error: error.message });
+    console.error('Error fetching trip reviews:', error);
+    res.status(500).json({ message: 'Error fetching trip reviews' });
   }
 };
