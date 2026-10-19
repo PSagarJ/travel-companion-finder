@@ -120,6 +120,51 @@ const Login = () => {
                 {!loading && <ArrowRight className="size-4" />}
               </Button>
             </form>
+
+            {/* Quick Demo Login selector */}
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/[.03] p-4 text-left">
+              <p className="text-[11px] font-bold uppercase tracking-[.15em] text-[#ff9a78]">
+                ⚡ Quick Demo Accounts (One-Click)
+              </p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      email: "sagar123@gmail.com",
+                      password: "password123",
+                    })
+                  }
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80 transition hover:border-[#ff704d]/40 hover:bg-[#ff704d]/10 hover:text-white"
+                >
+                  Sagar J P (Adventure)
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      email: "maya.lin@gmail.com",
+                      password: "password123",
+                    })
+                  }
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80 transition hover:border-[#ff704d]/40 hover:bg-[#ff704d]/10 hover:text-white"
+                >
+                  Maya Lin (Backpacker)
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({
+                      email: "sofia.rossi@gmail.com",
+                      password: "password123",
+                    })
+                  }
+                  className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white/80 transition hover:border-[#ff704d]/40 hover:bg-[#ff704d]/10 hover:text-white"
+                >
+                  Sofia Rossi (Luxury)
+                </button>
+              </div>
+            </div>
             <p className="mt-7 text-center text-sm text-white/40">
               New here?{" "}
               <Link

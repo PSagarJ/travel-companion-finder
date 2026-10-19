@@ -19,20 +19,42 @@ import reviewRoutes from './src/routes/reviewRoutes.js';
 import User from './src/models/User.js';
 import Trip from './src/models/TripModel.js';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 dotenv.config();
 
 const app = express();
 
-// Origins allowed to call this API — local dev plus the deployed frontend.
+// Origins allowed to call this API — local dev plus deployed frontends.
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
+  "http://localhost:3000",
+  "http://127.0.0.1:5173",
   "https://travel-companion-finder-frontend.onrender.com",
   process.env.CLIENT_URL,
 ].filter(Boolean);
 
+const isOriginAllowed = (origin) => {
+  if (!origin) return true; // allow same-origin, curl, server-to-server, mobile
+  if (allowedOrigins.includes(origin)) return true;
+  // Allow any local dev port
+  if (/^http:\/\/localhost:\d+$/.test(origin) || /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) return true;
+  // Allow Vercel preview and production deployments
+  if (/^https:\/\/.*\.vercel\.app$/.test(origin)) return true;
+  // Allow Render deployments
+  if (/^https:\/\/.*\.onrender\.com$/.test(origin)) return true;
+  return false;
+};
+
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
@@ -63,6 +85,20 @@ app.use(helmet({
 }));
 app.use(express.json({ limit: '1mb' }));
 app.use(cors(corsOptions));
+
+// Health Check Endpoints for cloud load balancers and deployment probes
+const healthHandler = (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    service: 'travel-companion-finder-api',
+    uptime: `${Math.floor(process.uptime())}s`,
+    timestamp: new Date().toISOString(),
+  });
+};
+
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
+
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);
 
@@ -70,8 +106,11 @@ app.use('/api/auth', authLimiter);
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
-    methods: ["GET", "POST"]
+    origin: (origin, callback) => {
+      callback(null, isOriginAllowed(origin));
+    },
+    methods: ["GET", "POST"],
+    credentials: true,
   }
 });
 
@@ -86,7 +125,11 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/reviews', reviewRoutes);
 
-// --- 4. GLOBAL ERROR HANDLER ---
+// --- 4. OPTIONAL STATIC SERVING IN PRODUCTION ---
+const clientDistPath = path.resolve(__dirname, '../client/dist');
+app.use(express.static(clientDistPath));
+
+// --- 5. GLOBAL ERROR HANDLER ---
 app.use((err, req, res, next) => {
   if (err.message === 'Not allowed by CORS') {
     return res.status(403).json({ message: 'CORS forbidden: origin not allowed.' });
@@ -103,7 +146,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-// --- 5. SOCKET.IO AUTHENTICATION ---
+// Single Page Application routing fallback for production deployment
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+    return res.status(404).json({ message: 'API route not found' });
+  }
+  const indexPath = path.join(clientDistPath, 'index.html');
+  res.sendFile(indexPath, (err) => {
+    if (err) next();
+  });
+});
+
+// --- 6. SOCKET.IO AUTHENTICATION ---
 io.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token;
@@ -120,7 +174,7 @@ io.use(async (socket, next) => {
   }
 });
 
-// --- 6. SOCKET.IO CHAT LOGIC ---
+// --- 7. SOCKET.IO CHAT LOGIC ---
 io.on('connection', (socket) => {
   console.log(`🔌 ${socket.user.name} connected: ${socket.id}`);
 
@@ -153,7 +207,6 @@ io.on('connection', (socket) => {
   socket.on('send_message', (messageData) => {
     if (!messageData || !messageData.tripId || !messageData.text) return;
 
-    // Security check: Verify socket has actually joined this trip's room
     if (!socket.rooms.has(messageData.tripId)) {
       return socket.emit('chat_error', 'You must join the trip room before sending messages.');
     }
@@ -176,14 +229,19 @@ io.on('connection', (socket) => {
   });
 });
 
-// --- 7. DATABASE & SERVER BOOTUP ---
+// --- 8. DATABASE & SERVER BOOTUP ---
 const PORT = process.env.PORT || 5000;
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB Connected Successfully! 🚀');
-    server.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
-    });
-  })
-  .catch((err) => console.log('❌ Database connection error:', err));
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT} 🚀`);
+});
+
+if (process.env.MONGO_URI) {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => {
+      console.log('MongoDB Connected Successfully! 🚀');
+    })
+    .catch((err) => console.error('❌ Database connection error:', err.message));
+} else {
+  console.warn('⚠️ MONGO_URI is not set in environment variables');
+}

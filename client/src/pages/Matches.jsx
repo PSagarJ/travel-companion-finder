@@ -13,11 +13,76 @@ const coverPhotos = [
   "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000",
 ];
 
+// Demo matches to showcase the cosine + jaccard compatibility breakdown
+const demoMatches = [
+  {
+    user: {
+      _id: "demo-user-1",
+      name: "Maya Lin",
+      travelStyle: "Backpacker",
+      vibeBadges: ["Photography", "Backpacking", "Mountains"],
+    },
+    matchPercentage: "94.5",
+    sharedDestinations: ["Bali", "Kyoto"],
+    breakdown: {
+      travelStyle: { score: 95, label: "Very similar travel style" },
+      destinations: { score: 92, sharedCount: 2, shared: ["Bali", "Kyoto"] },
+      interests: { score: 96, sharedCount: 3, shared: ["Photography", "Backpacking", "Mountains"] },
+    },
+  },
+  {
+    user: {
+      _id: "demo-user-2",
+      name: "Liam O'Connor",
+      travelStyle: "Adventure",
+      vibeBadges: ["Road Trips", "Camping", "Hiking"],
+    },
+    matchPercentage: "88.0",
+    sharedDestinations: ["Ladakh", "Swiss Alps"],
+    breakdown: {
+      travelStyle: { score: 90, label: "Compatible travel style" },
+      destinations: { score: 85, sharedCount: 2, shared: ["Ladakh", "Swiss Alps"] },
+      interests: { score: 89, sharedCount: 2, shared: ["Road Trips", "Hiking"] },
+    },
+  },
+  {
+    user: {
+      _id: "demo-user-3",
+      name: "Sofia Rossi",
+      travelStyle: "Luxury",
+      vibeBadges: ["Food Trails", "Beaches", "Culture"],
+    },
+    matchPercentage: "82.4",
+    sharedDestinations: ["Amalfi Coast", "Santorini"],
+    breakdown: {
+      travelStyle: { score: 80, label: "Compatible travel style" },
+      destinations: { score: 85, sharedCount: 2, shared: ["Amalfi Coast", "Santorini"] },
+      interests: { score: 82, sharedCount: 2, shared: ["Food Trails", "Beaches"] },
+    },
+  },
+  {
+    user: {
+      _id: "demo-user-4",
+      name: "Elena Rostova",
+      travelStyle: "Chill",
+      vibeBadges: ["Culture", "Photography", "Food Trails"],
+    },
+    matchPercentage: "79.2",
+    sharedDestinations: ["Kyoto", "Santorini"],
+    breakdown: {
+      travelStyle: { score: 75, label: "Compatible travel style" },
+      destinations: { score: 80, sharedCount: 2, shared: ["Kyoto", "Santorini"] },
+      interests: { score: 83, sharedCount: 2, shared: ["Culture", "Photography"] },
+    },
+  },
+];
+
 const Matches = () => {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [authRequired, setAuthRequired] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
 
   const fetchMatches = async () => {
     setLoading(true);
@@ -31,7 +96,6 @@ const Matches = () => {
     }
 
     try {
-      // No userId needed — the server identifies you from your token
       const response = await api.get("/api/matches");
       setMatches(response.data);
     } catch (err) {
@@ -47,9 +111,6 @@ const Matches = () => {
   };
 
   useEffect(() => {
-    // The effect uses its own local function (not the outer fetchMatches,
-    // which the "Try again" button also uses) so every state update here is
-    // properly gated behind the ignore flag for this specific mount.
     let ignore = false;
 
     const loadOnMount = async () => {
@@ -94,7 +155,9 @@ const Matches = () => {
     );
   }
 
-  if (authRequired) {
+  const effectiveMatches = matches.length > 0 ? matches : (showDemo ? demoMatches : []);
+
+  if (authRequired && !showDemo) {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <Lock className="mx-auto mb-3 size-10 text-muted-foreground" />
@@ -102,46 +165,57 @@ const Matches = () => {
           Log in to see your matches
         </h2>
         <p className="mt-2 mb-6 text-muted-foreground">
-          You need to be logged in to find travel buddies.
+          Log in to see companions custom-matched to your travel personality, or preview demo matches below.
         </p>
-        <Button asChild>
-          <Link to="/login">Log in</Link>
-        </Button>
+        <div className="flex justify-center gap-3">
+          <Button asChild>
+            <Link to="/login">Log in</Link>
+          </Button>
+          <Button variant="outline" onClick={() => setShowDemo(true)}>
+            Preview Demo Matches
+          </Button>
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && !showDemo) {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <AlertCircle className="mx-auto mb-3 size-10 text-destructive" />
         <h2 className="font-display text-2xl font-semibold text-foreground">
           {error}
         </h2>
-        <Button variant="secondary" className="mt-4" onClick={fetchMatches}>
-          Try again
-        </Button>
+        <div className="mt-4 flex justify-center gap-3">
+          <Button variant="secondary" onClick={fetchMatches}>
+            Try again
+          </Button>
+          <Button variant="outline" onClick={() => setShowDemo(true)}>
+            Preview Demo Matches
+          </Button>
+        </div>
       </div>
     );
   }
 
-  if (matches.length === 0) {
+  if (matches.length === 0 && !showDemo) {
     return (
       <div className="mx-auto max-w-md px-4 py-24 text-center">
         <Users className="mx-auto mb-3 size-10 text-muted-foreground" />
         <h2 className="font-display text-2xl font-semibold text-foreground">
           No matches found yet
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          Check back once more travelers join, or{" "}
-          <Link
-            to="/profile/edit"
-            className="font-semibold text-primary hover:underline"
-          >
-            update your travel profile
-          </Link>
-          .
+        <p className="mt-2 mb-6 text-muted-foreground">
+          Check back once more travelers join, or update your wishlist and vibe badges.
         </p>
+        <div className="flex justify-center gap-3">
+          <Button asChild>
+            <Link to="/profile/edit">Update travel profile</Link>
+          </Button>
+          <Button variant="outline" onClick={() => setShowDemo(true)}>
+            Preview Demo Matches
+          </Button>
+        </div>
       </div>
     );
   }
@@ -164,8 +238,14 @@ const Matches = () => {
         </Link>
       </div>
 
+      {showDemo && matches.length === 0 && (
+        <div className="mb-6 rounded-2xl border border-primary/20 bg-primary/10 p-4 text-center text-sm font-semibold text-primary">
+          ✨ Viewing Matchmaking Algorithm Demo — Showing compatible companions scored with Cosine & Jaccard multi-factor similarity.
+        </div>
+      )}
+
       <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-7">
-        {matches.map((match, index) => {
+        {effectiveMatches.map((match, index) => {
           const bgImage = coverPhotos[index % coverPhotos.length];
           const initial = match.user?.name
             ? match.user.name.charAt(0).toUpperCase()

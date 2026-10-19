@@ -4,11 +4,16 @@ import { OrbitControls, Html } from "@react-three/drei";
 import { TextureLoader } from "three";
 import { useNavigate } from "react-router-dom";
 
-// Approximate coordinates for the three featured destinations
+// Approximate coordinates for the featured global destinations
 const PINS = [
   { id: "dest-1", label: "Bali", lat: -8.34, lng: 115.09 },
   { id: "dest-2", label: "Kyoto", lat: 35.01, lng: 135.77 },
   { id: "dest-3", label: "Ladakh", lat: 34.15, lng: 77.58 },
+  { id: "dest-4", label: "Swiss Alps", lat: 46.68, lng: 7.86 },
+  { id: "dest-5", label: "Amalfi Coast", lat: 40.63, lng: 14.60 },
+  { id: "dest-6", label: "Patagonia", lat: -51.25, lng: -72.88 },
+  { id: "dest-7", label: "Santorini", lat: 36.39, lng: 25.46 },
+  { id: "dest-8", label: "Serengeti", lat: -2.33, lng: 34.83 },
 ];
 
 const RADIUS = 1.5;

@@ -53,6 +53,58 @@ const curatedTrips = [
     days: 6,
     img: "https://images.unsplash.com/photo-1518005020951-eccb494ad742?q=85&w=1400&auto=format&fit=crop",
   },
+  {
+    _id: "dest-4",
+    title: "Swiss Alps & Lakes Expedition",
+    location: "Interlaken, Switzerland",
+    days: 8,
+    img: "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=85&w=1400&auto=format&fit=crop",
+  },
+  {
+    _id: "dest-5",
+    title: "Amalfi Coast & Capri Dream",
+    location: "Positano, Italy",
+    days: 7,
+    img: "https://images.unsplash.com/photo-1533105079780-92b9be482077?q=85&w=1400&auto=format&fit=crop",
+  },
+  {
+    _id: "dest-7",
+    title: "Santorini Caldera & Sunsets",
+    location: "Santorini, Greece",
+    days: 6,
+    img: "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?q=85&w=1400&auto=format&fit=crop",
+  },
+];
+
+const fallbackCommunityTrips = [
+  {
+    _id: "dest-1",
+    title: "Bali Surf & Waterfall Trekking",
+    destination: "Bali, Indonesia",
+    startDate: "2026-11-10",
+    isCuratedLink: true,
+  },
+  {
+    _id: "dest-2",
+    title: "Kyoto Gion Temple Trail & Tea Houses",
+    destination: "Kyoto, Japan",
+    startDate: "2026-11-20",
+    isCuratedLink: true,
+  },
+  {
+    _id: "dest-4",
+    title: "High Altitude Swiss Alps Backpacking",
+    destination: "Interlaken, Switzerland",
+    startDate: "2026-12-05",
+    isCuratedLink: true,
+  },
+  {
+    _id: "dest-5",
+    title: "Amalfi Coast Cliffside Walk & Sunset Cruise",
+    destination: "Positano, Italy",
+    startDate: "2026-12-18",
+    isCuratedLink: true,
+  },
 ];
 
 const interests = [
@@ -76,9 +128,18 @@ const Home = () => {
     axios
       .get(`${BASE_URL}/api/trips`)
       .then((r) => {
-        if (!ignore) setCommunityTrips(r.data);
+        if (!ignore) {
+          if (Array.isArray(r.data) && r.data.length > 0) {
+            setCommunityTrips(r.data);
+          } else {
+            setCommunityTrips(fallbackCommunityTrips);
+          }
+        }
       })
-      .catch((e) => console.error("Error fetching community trips:", e))
+      .catch((e) => {
+        console.error("Error fetching community trips:", e);
+        if (!ignore) setCommunityTrips(fallbackCommunityTrips);
+      })
       .finally(() => {
         if (!ignore) setLoading(false);
       });
@@ -87,15 +148,17 @@ const Home = () => {
     };
   }, [BASE_URL]);
 
+  const activeTrips = communityTrips.length > 0 ? communityTrips : fallbackCommunityTrips;
+
   const filteredTrips = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
-    if (!q) return communityTrips;
-    return communityTrips.filter(
+    if (!q) return activeTrips;
+    return activeTrips.filter(
       (t) =>
         t.title?.toLowerCase().includes(q) ||
         t.destination?.toLowerCase().includes(q),
     );
-  }, [communityTrips, searchTerm]);
+  }, [activeTrips, searchTerm]);
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#07090d] text-white">
@@ -329,7 +392,7 @@ const Home = () => {
             Spin the globe
           </p>
           <h2 className="mt-3 font-display text-3xl font-extrabold tracking-tight sm:text-5xl">
-            Three destinations. One planet.
+            Eight destinations. One planet.
           </h2>
         </div>
         <Suspense
@@ -355,7 +418,7 @@ const Home = () => {
             </h2>
           </div>
           <span className="hidden text-sm text-white/35 sm:block">
-            03 experiences
+            06 featured journeys
           </span>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
@@ -464,7 +527,13 @@ const Home = () => {
                     size="sm"
                     className="shrink-0 rounded-full border-white/10 bg-white/[.03] text-white hover:bg-white hover:text-black"
                   >
-                    <Link to={`/destination/${trip._id}`}>
+                    <Link
+                      to={
+                        trip.isCuratedLink || String(trip._id).startsWith("dest-")
+                          ? `/explore/${trip._id}`
+                          : `/destination/${trip._id}`
+                      }
+                    >
                       View <ArrowRight className="size-3.5" />
                     </Link>
                   </Button>

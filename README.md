@@ -589,6 +589,19 @@ CLOUDINARY_API_SECRET=your_api_secret
 CLIENT_URL=http://localhost:5173
 ```
 
+### Seed Demo Data (Recommended)
+
+To populate the database with 8 realistic travelers, 6 community trips, ledger expenses, reviews, and travel feed photos:
+
+```bash
+npm run seed
+```
+
+> **Demo Login Credentials:** All seeded accounts share the password `password123`
+> - `sagar123@gmail.com` (Sagar J P — Adventure/Chill)
+> - `maya.lin@gmail.com` (Maya Lin — Backpacker)
+> - `sofia.rossi@gmail.com` (Sofia Rossi — Luxury)
+
 Start the backend:
 
 ```bash
@@ -599,6 +612,7 @@ The backend should run on:
 
 ```text
 http://localhost:5000
+Health Check: http://localhost:5000/health
 ```
 
 ---

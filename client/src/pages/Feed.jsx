@@ -1,12 +1,75 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Lock, ImagePlus, MapPin } from "lucide-react";
+import { ImagePlus, MapPin } from "lucide-react";
 import api from "../api/axiosInstance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+
+const fallbackPosts = [
+  {
+    _id: "demo-post-1",
+    userName: "Sagar J P",
+    imageUrl:
+      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=85&w=1200&auto=format&fit=crop",
+    caption:
+      "Sunrise at Uluwatu Temple. Waves crashing hundreds of feet below with coastal monkeys along the cliffs.",
+    destination: "Uluwatu, Bali",
+    createdAt: "2026-09-19T05:33:18.355Z",
+  },
+  {
+    _id: "demo-post-2",
+    userName: "Elena Rostova",
+    imageUrl:
+      "https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=85&w=1200&auto=format&fit=crop",
+    caption:
+      "Early morning in Arashiyama Bamboo Grove before the crowds arrive. Whispering wind through towering stalks.",
+    destination: "Kyoto, Japan",
+    createdAt: "2026-09-22T08:15:20.120Z",
+  },
+  {
+    _id: "demo-post-3",
+    userName: "Marcus Vance",
+    imageUrl:
+      "https://images.unsplash.com/photo-1518005020951-eccb494ad742?q=85&w=1200&auto=format&fit=crop",
+    caption:
+      "Highest motorable pass at 18,380 ft. Thin cold air, warm butter tea, and lifelong riding crew.",
+    destination: "Khardung La, Ladakh",
+    createdAt: "2026-09-28T11:42:05.412Z",
+  },
+  {
+    _id: "demo-post-4",
+    userName: "Aria Chen",
+    imageUrl:
+      "https://images.unsplash.com/photo-1530122037265-a5f1f91d3b99?q=85&w=1200&auto=format&fit=crop",
+    caption:
+      "Lake Brienz reflecting the snow-dusted Bernese Oberland peaks like an emerald mirror.",
+    destination: "Interlaken, Switzerland",
+    createdAt: "2026-10-02T14:20:10.890Z",
+  },
+  {
+    _id: "demo-post-5",
+    userName: "Mateo Rossi",
+    imageUrl:
+      "https://images.unsplash.com/photo-1533105079780-92b9be482077?q=85&w=1200&auto=format&fit=crop",
+    caption:
+      "Golden hour sailing past the iconic Faraglioni rock formations off the cliffs of Capri.",
+    destination: "Amalfi Coast, Italy",
+    createdAt: "2026-10-08T17:35:44.200Z",
+  },
+  {
+    _id: "demo-post-6",
+    userName: "Zara Larsson",
+    imageUrl:
+      "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?q=85&w=1200&auto=format&fit=crop",
+    caption:
+      "Iconic whitewashed blue domes of Oia glowing gold as the Aegean sun dips below the horizon.",
+    destination: "Santorini, Greece",
+    createdAt: "2026-10-12T19:10:30.500Z",
+  },
+];
 
 const Feed = () => {
   const [searchParams] = useSearchParams();
@@ -17,7 +80,6 @@ const Feed = () => {
   const currentUser = loggedInUser ? JSON.parse(loggedInUser) : null;
 
   const [loading, setLoading] = useState(true);
-  const [authRequired, setAuthRequired] = useState(false);
   const [caption, setCaption] = useState("");
   const [destination, setDestination] = useState(
     searchParams.get("destination") || "",
@@ -29,35 +91,22 @@ const Feed = () => {
   const [selectedPost, setSelectedPost] = useState(null);
 
   useEffect(() => {
-    // Guards against setting state after this effect has been cleaned up
-    // (e.g. the component unmounted before the request resolved).
     let ignore = false;
 
     const fetchPosts = async () => {
-      // Read localStorage fresh here instead of closing over the outer
-      // `currentUser`/`loggedInUser` variables — this is what lets the
-      // effect safely run once on mount with an empty dependency array.
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        if (!ignore) {
-          setAuthRequired(true);
-          setLoading(false);
-        }
-        return;
-      }
-
       try {
         const response = await api.get("/api/posts");
-        if (!ignore) setPosts(response.data);
+        if (!ignore) {
+          if (Array.isArray(response.data) && response.data.length > 0) {
+            setPosts(response.data);
+          } else {
+            setPosts(fallbackPosts);
+          }
+        }
       } catch (error) {
         if (!ignore) {
-          // A stored token can still be expired/invalid — treat a 401 the same way
-          if (error.response?.status === 401) {
-            setAuthRequired(true);
-          } else {
-            console.error("Error loading feed:", error.message);
-          }
+          console.error("Error loading feed:", error.message);
+          setPosts(fallbackPosts);
         }
       } finally {
         if (!ignore) setLoading(false);
@@ -122,40 +171,11 @@ const Feed = () => {
       setPreview(null);
       setStatus("Posted!");
     } catch (error) {
-      if (error.response?.status === 401) {
-        setAuthRequired(true);
-      } else {
-        setStatus(error.response?.data?.message || "Failed to upload photo.");
-      }
+      setStatus(error.response?.data?.message || "Failed to upload photo.");
     } finally {
       setUploading(false);
     }
   };
-
-  // Logged-out (or expired-session) view: friendly prompt instead of a
-  // silently empty feed.
-  if (!loading && authRequired) {
-    return (
-      <div className="mx-auto max-w-md px-4 py-24 text-center">
-        <Lock className="mx-auto mb-3 size-10 text-muted-foreground" />
-        <h1 className="font-display text-2xl font-semibold text-foreground">
-          Log in to see travel memories
-        </h1>
-        <p className="mt-2 mb-6 text-muted-foreground">
-          The photo feed is only visible to logged-in members. Log in or create
-          an account to view and share travel photos.
-        </p>
-        <div className="flex justify-center gap-3">
-          <Button asChild>
-            <Link to="/login">Log in</Link>
-          </Button>
-          <Button asChild variant="secondary">
-            <Link to="/register">Sign up</Link>
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-[935px] px-4 py-8">
@@ -163,8 +183,9 @@ const Feed = () => {
         Travel memories
       </h1>
 
-      {/* Upload form */}
-      <Card className="mb-8 max-w-md p-5">
+      {/* Upload form for members or prompt card for visitors */}
+      {currentUser ? (
+        <Card className="mb-8 max-w-md p-5">
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           {linkedTripId && (
             <div className="rounded-xl bg-primary/10 px-3 py-2 text-sm font-semibold text-primary">
@@ -221,6 +242,29 @@ const Feed = () => {
           )}
         </form>
       </Card>
+      ) : (
+        <Card className="mb-8 max-w-md border-white/10 bg-white/[.03] p-6">
+          <div className="flex items-center gap-3.5">
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#ff704d]/15 text-[#ff9a78]">
+              <ImagePlus className="size-5" />
+            </div>
+            <div>
+              <h3 className="font-display font-bold text-white">Share your adventures</h3>
+              <p className="text-xs text-white/55">
+                Join our community to upload photos, geotag destinations, and connect with fellow explorers.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 flex gap-2.5">
+            <Button asChild size="sm" className="rounded-full bg-[#ff704d] text-black hover:bg-[#ff8566]">
+              <Link to="/login">Log in to post</Link>
+            </Button>
+            <Button asChild variant="outline" size="sm" className="rounded-full border-white/15 text-white hover:bg-white/10">
+              <Link to="/register">Create passport</Link>
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {/* Feed grid */}
       {loading ? (

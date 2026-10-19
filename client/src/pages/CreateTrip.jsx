@@ -156,8 +156,10 @@ const CreateTrip = () => {
                   className={selectClass}
                 >
                   <option value="Adventure">Adventure</option>
-                  <option value="Relaxation">Relaxation</option>
-                  <option value="Cultural">Cultural</option>
+                  <option value="Backpacker">Backpacker</option>
+                  <option value="Chill">Chill</option>
+                  <option value="Luxury">Luxury</option>
+                  <option value="Budget">Budget</option>
                 </select>
               </div>
               <div>
